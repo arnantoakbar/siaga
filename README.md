@@ -239,6 +239,8 @@ ditembus — yang dibaca persis gambar yang MAGMA tampilkan sendiri.
 - **Rasio tiap kamera dibaca dari berkas JPEG-nya**, bukan diseragamkan: dua dari enam
   kamera merekam 150 × 113. Bingkai yang gagal dimuat menampilkan keterangan, bukan ikon
   gambar rusak bawaan peramban.
+- **Ketuk sebuah bingkai untuk membesarkannya.** Dibatasi 320 px — sumbernya cuma 150 px,
+  jadi lebih dari sekitar dua kali lipat hanya menghasilkan gambar kabur.
 - **Lisensi CC BY-NC-ND 4.0, PVMBG Badan Geologi.** Gambar disajikan apa adanya, tanpa
   modifikasi, dengan atribusi dan tautan balik di bawah setiap grid. Kalau kamu memakai
   proyek ini untuk sesuatu yang komersial, lisensi itu tidak mengizinkannya.
@@ -346,6 +348,12 @@ membuat perbaikan halaman tidak sampai ke pembaca selama pengembangan.
 mengumpulkan data (503), halaman mencoba lagi dengan jeda naik bertahap sampai 30 detik
 dan menampilkan spanduk yang menyebutkan apa yang terjadi — bukan menggantung sampai
 penyegaran lima menit.
+
+**Ikon punya ukuran bawaan.** Setiap ikon dari `ikon()` membawa kelas `.ikon` yang
+memberinya `1em`. Tanpa itu, `<svg>` tanpa atribut `width`/`height` diberi 300 × 150 oleh
+peramban, dan dengan `svg { display: block }` global sebuah ikon hiasan berubah jadi balok
+raksasa — persis yang sempat terjadi pada keterangan kamera. Kekhususan `.ikon` sengaja
+rendah, jadi aturan seperti `.petak-sel svg` tetap menang saat butuh ukuran lain.
 
 **Nol dependensi npm.** Node 25 sudah membawa `fetch`, `node:sqlite`, `node:http`, dan
 `WebSocket`. Tidak ada `npm install`, tidak ada rantai pasok yang perlu dijaga, dan

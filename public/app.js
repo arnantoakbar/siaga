@@ -30,8 +30,11 @@ const lebarWadah = (sel, cadangan = 360) => {
   return Math.max(300, Math.min(900, Math.round(n?.clientWidth || cadangan)));
 };
 
+// Kelas `ikon` wajib ikut: ia yang memberi ukuran bawaan. SVG tanpa width/height
+// diberi 300x150 oleh peramban, dan dengan `svg { display: block }` global ikon
+// hiasan berubah jadi balok raksasa — pernah terjadi pada keterangan kamera.
 const ikon = (nama, kelas) =>
-  `<svg viewBox="0 0 24 24" ${kelas ? `class="${kelas}"` : ''} aria-hidden="true"><use href="#i-${String(nama).replace(/^i-/, '')}"/></svg>`;
+  `<svg viewBox="0 0 24 24" class="ikon${kelas ? ` ${kelas}` : ''}" aria-hidden="true"><use href="#i-${String(nama).replace(/^i-/, '')}"/></svg>`;
 const aman = (s) => String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 // PVMBG menulis "Masyarakat/pengunjung/wisatawan/pendaki" sebagai satu kata panjang.
 // Peramban tidak memutus baris setelah garis miring, jadi disisipkan titik putus
@@ -312,9 +315,11 @@ async function gambarCctv() {
         $('#cctv-besar').innerHTML =
           cctvBesar == null
             ? ''
-            : `<img src="/api/cctv/${cctvBesar}.jpg?t=${t}" alt="${aman(j.kamera[cctvBesar].nama)}">
-               <p class="cctv-kaki">${aman(j.kamera[cctvBesar].nama)} · ${j.kamera[cctvBesar].lebar}×${j.kamera[cctvBesar].tinggi} piksel ·
-                 <a href="${aman(j.sumberUrl)}" target="_blank" rel="noopener">lihat di MAGMA</a></p>`;
+            : `<figure>
+                 <img src="/api/cctv/${cctvBesar}.jpg?t=${t}" alt="${aman(j.kamera[cctvBesar].nama)}">
+                 <figcaption class="cctv-kaki">${aman(j.kamera[cctvBesar].nama)} · ${j.kamera[cctvBesar].lebar}×${j.kamera[cctvBesar].tinggi} piksel ·
+                   <a href="${aman(j.sumberUrl)}" target="_blank" rel="noopener">lihat di MAGMA</a></figcaption>
+               </figure>`;
       };
   } catch (e) {
     wadah.innerHTML = `<p class="cap">${ikon('silang')}<span>Kamera pemantau tidak bisa diambil: ${aman(e.message)}.
