@@ -76,21 +76,27 @@ let tampilan = 'situasi';
 let tindakanTerbuka = null;
 let cctvBesar = null;
 
-// ── tema: ikut perangkat → terang → gelap ─────────────────────────────────
-const TEMA = ['sistem', 'terang', 'gelap'];
-const LABEL_TEMA = { sistem: 'Ikut perangkat', terang: 'Terang', gelap: 'Gelap' };
-// ?tema= menang atas pilihan tersimpan: dipakai untuk tangkapan layar dan
-// untuk berbagi tautan dengan tema tertentu. Tanpa ini, terapkanTema() akan
-// menghapus lagi atribut yang baru dipasang skrip anti-kedip di <head>.
+// ── tema: terang atau gelap; tanpa pilihan tersimpan, ikut perangkat ──────
+// `tema` bernilai null selama pembaca belum memilih. Selama null, atribut
+// data-tema tidak dipasang sama sekali sehingga @media prefers-color-scheme
+// yang menentukan — termasuk saat perangkat berganti tema di tengah jalan.
+const gelapPerangkat = () => matchMedia('(prefers-color-scheme: dark)').matches;
 const temaUrl = new URLSearchParams(location.search).get('tema');
-let tema = (temaUrl === 'terang' || temaUrl === 'gelap' ? temaUrl : null) || localStorage.getItem('siaga.tema') || 'sistem';
+let tema =
+  (temaUrl === 'terang' || temaUrl === 'gelap' ? temaUrl : null) ||
+  (['terang', 'gelap'].includes(localStorage.getItem('siaga.tema')) ? localStorage.getItem('siaga.tema') : null);
+
+const temaEfektif = () => tema ?? (gelapPerangkat() ? 'gelap' : 'terang');
 
 function terapkanTema() {
-  if (tema === 'sistem') document.documentElement.removeAttribute('data-tema');
-  else document.documentElement.setAttribute('data-tema', tema);
+  if (tema) document.documentElement.setAttribute('data-tema', tema);
+  else document.documentElement.removeAttribute('data-tema');
+
+  // Tombol menampilkan tujuan, bukan keadaan sekarang: bulan berarti "ganti ke gelap".
+  const lawan = temaEfektif() === 'gelap' ? 'terang' : 'gelap';
   const b = $('#tombol-tema');
-  b.innerHTML = ikon(tema === 'sistem' ? 'sistem' : tema);
-  b.title = `Tema: ${LABEL_TEMA[tema]}. Ketuk untuk ganti.`;
+  b.innerHTML = ikon(lawan);
+  b.title = `Ganti ke mode ${lawan}`;
   b.setAttribute('aria-label', b.title);
   // Grafik memakai warna dari token CSS, jadi harus digambar ulang saat tema berubah.
   if (D) gambarTampilanAktif(true);
@@ -339,8 +345,11 @@ function gambarGempa() {
   const W = lebarWadah('#gempa-wadah');
   const sempit = W < 430;
   const ml = sempit ? 14 : 150;
-  const mr = 44, tb = sempit ? 20 : 30, jarak = sempit ? 30 : 10, mt = sempit ? 20 : 8;
-  const H = mt * 2 + urut.length * (tb + jarak);
+  // Di tata letak sempit label duduk di atas batangnya, jadi ruang atas harus
+  // memuat satu baris teks penuh — bukan cuma jarak antar batang.
+  const mr = 44, tb = sempit ? 20 : 30, jarak = sempit ? 30 : 10, mt = sempit ? 26 : 16;
+  // Jarak antar batang tidak perlu ikut di bawah batang terakhir.
+  const H = mt + urut.length * (tb + jarak) - jarak + 14;
   const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, style: 'width:100%;height:auto', role: 'img',
     'aria-label': `Jumlah gempa per jenis pada laporan terakhir: ${urut.map((x) => `${x.jenis} ${x.jumlah}`).join(', ')}.` });
 
@@ -402,6 +411,7 @@ function gantiKota() {
   gambarStrip();
   gambarRingkasLokasi();
   gambarPeta();
+  if ($('#tabel-kota').firstElementChild) gambarTabelKota();
   gambarDampak();
   gambarTindakan();
   if ($('#udara-wadah').closest('details').open) gambarUdara();
@@ -720,9 +730,38 @@ function gambarPeta() {
     .map(([s, l]) => `<span><i style="background:${warnaStatus(s)}"></i>${l}</span>`).join('');
   $('#peta-kaki').textContent = kakiPeta();
 
-  $('#tabel-kota').innerHTML = `<table class="data"><thead><tr><th>Kota</th><th>Jarak</th><th>Arah</th><th>ISPU</th><th>Status</th></tr></thead><tbody>
-    ${D.kota.map((k) => `<tr><td>${aman(k.nama)}</td><td>${k.jarakKm} km</td><td>${aman(k.arahMata)}</td><td>${k.ispu?.nilai ?? '—'}</td><td>${LABEL_STATUS[k.status]}</td></tr>`).join('')}
-  </tbody></table>`;
+  gambarTabelKota();
+}
+
+/** Padanan tabel untuk peta: identitas tidak pernah lewat warna saja. */
+function gambarTabelKota() {
+  const tabel = $('#tabel-kota');
+  tabel.innerHTML = `<table class="data">
+    <thead><tr><th>Kota</th><th>Jarak</th><th>Arah</th><th>ISPU</th><th>Status</th></tr></thead>
+    <tbody>${D.kota.map((k) => `
+      <tr data-kota="${aman(k.kotaId)}" data-pilih="${k.kotaId === kotaTerpilih}" tabindex="0" role="button"
+          aria-label="Pilih ${aman(k.nama)}">
+        <td>${aman(k.nama)}</td>
+        <td>${k.jarakKm} km</td>
+        <td>${aman(k.arahMata)}</td>
+        <td>${k.ispu?.nilai ?? '—'}</td>
+        <td><span class="cip-status st-${k.status}">
+          <svg viewBox="0 0 24 24" class="ikon" aria-hidden="true"><use href="#${IKON_STATUS[k.status]}"/></svg>${LABEL_STATUS[k.status]}
+        </span></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+
+  for (const tr of $$('tr[data-kota]', tabel)) {
+    const pilih = () => {
+      kotaTerpilih = tr.dataset.kota;
+      if (lokasiSaya) lokasiSaya = null;
+      localStorage.setItem('siaga.kota', kotaTerpilih);
+      $('#pilih-kota').value = kotaTerpilih;
+      gantiKota();
+    };
+    tr.onclick = pilih;
+    tr.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pilih(); } };
+  }
 }
 
 // ── peta Windy ────────────────────────────────────────────────────────────
@@ -1083,12 +1122,14 @@ async function muat() {
 }
 
 $('#tombol-tema').onclick = () => {
-  tema = TEMA[(TEMA.indexOf(tema) + 1) % TEMA.length];
-  tema === 'sistem' ? localStorage.removeItem('siaga.tema') : localStorage.setItem('siaga.tema', tema);
+  tema = temaEfektif() === 'gelap' ? 'terang' : 'gelap';
+  localStorage.setItem('siaga.tema', tema);
   terapkanTema();
 };
+// Selama pembaca belum memilih, perubahan tema perangkat diikuti — termasuk
+// pergantian otomatis siang/malam.
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if (tema === 'sistem' && D) gambarTampilanAktif(true);
+  if (!tema) terapkanTema();
 });
 for (const b of $$('.tab-u')) b.onclick = () => pindahTab(b.dataset.ke);
 for (const b of $$('.strip-sisi')) b.onclick = () => pindahTab(b.dataset.ke);

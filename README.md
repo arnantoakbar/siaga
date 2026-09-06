@@ -274,13 +274,23 @@ Halaman tetap berfungsi penuh tanpa izin lokasi. Fiturnya percepatan, bukan syar
 
 ## Tema
 
-Bawaannya mengikuti pengaturan perangkat (`prefers-color-scheme`). Tombol di kanan atas
-memutar tiga keadaan: **ikut perangkat → terang → gelap**, dan pilihannya diingat di
-`localStorage`. Tema juga bisa dipaksa lewat `?tema=terang` atau `?tema=gelap` untuk
-berbagi tautan atau mengambil tangkapan layar.
+Dua keadaan saja: **terang** dan **gelap**. Selama pembaca belum menekan tombolnya,
+tidak ada atribut tema yang dipasang sama sekali — `@media (prefers-color-scheme)` yang
+menentukan, jadi halaman ikut perangkat, termasuk saat perangkat berganti sendiri dari
+terang ke gelap di malam hari. Sekali ditekan, pilihannya disimpan dan menang.
+
+Tombolnya menampilkan **tujuan**, bukan keadaan sekarang: ikon bulan berarti "ganti ke
+gelap". Tema juga bisa dipaksa lewat `?tema=terang` atau `?tema=gelap` untuk berbagi
+tautan atau mengambil tangkapan layar.
 
 Mode gelap bukan pembalikan otomatis: langkah warnanya dipilih ulang untuk latar gelap
 dan diuji ulang. Orang memeriksa status gunung jam dua pagi.
+
+Tabel kota memakai penanda yang sama: baris yang sedang dipakai **ditebalkan** dan diberi
+garis di tepi kiri, bukan warna saja. Status tiap kota tampil sebagai keping berikon
+dan berwarna — warna, bentuk, dan teks sekaligus. Tabelnya digulir mendatar di dalam
+wadahnya sendiri, jadi badan halaman tidak pernah bergulir ke samping. Ketuk sebuah baris
+untuk memindahkan seluruh halaman ke kota itu.
 
 Tidak ada kedipan saat halaman dimuat — atribut temanya dipasang oleh skrip kecil di
 `<head>` sebelum halaman digambar.
