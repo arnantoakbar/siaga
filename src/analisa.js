@@ -56,8 +56,10 @@ export function jalurAbu(arahKota, jarak, angin, ambang) {
   return kena.length ? { lapisan: kena, terdekat: kena[0] } : null;
 }
 
-function tindakan(teks, dasar, sumber, prioritas) {
-  return { teks, dasar, sumber, prioritas };
+/** `isi` boleh string (teks saja) atau objek {teks, ringkas, ikon} dari config. */
+function tindakan(isi, dasar, sumber, prioritas) {
+  const o = typeof isi === 'string' ? { teks: isi } : isi;
+  return { teks: o.teks, ringkas: o.ringkas ?? null, ikon: o.ikon ?? 'awas', dasar, sumber, prioritas };
 }
 
 /** Analisa satu kota. */
@@ -105,8 +107,19 @@ export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
     for (const t of ambang.tindakanZonaDilarang)
       langkah.push(tindakan(t, `Jarak ${jarak} km, di dalam radius larangan ${radius} km`, 'PVMBG', 1));
 
-  for (const r of laporan?.rekomendasi || [])
-    langkah.push(tindakan(r, `Rekomendasi resmi pada laporan ${laporan.tanggal} periode ${laporan.periodeMulai}-${laporan.periodeSelesai} WIB`, 'PVMBG', 1));
+  for (const r of laporan?.rekomendasi || []) {
+    // Teks PVMBG dikutip utuh; hanya judul kartunya yang diringkas, dan itu pun
+    // diambil dari radius yang memang tertulis di kalimatnya.
+    const km = (r.match(/radius\s+(\d+(?:[.,]\d+)?)\s*km/i) || [])[1];
+    langkah.push(
+      tindakan(
+        { teks: r, ringkas: km ? `Jauhi radius ${km.replace(',', '.')} km` : 'Rekomendasi PVMBG', ikon: 'perisai' },
+        `Rekomendasi resmi pada laporan ${laporan.tanggal} periode ${laporan.periodeMulai}-${laporan.periodeSelesai} WIB`,
+        'PVMBG',
+        1
+      )
+    );
+  }
 
   if (ispu)
     for (const t of ambang.tindakanIspu[ispu.kategori] || [])

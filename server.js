@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { bukaDb, bacaPotret } from './src/db.js';
 import { kumpulkan, analisaTitik, CONFIG } from './src/kumpul.js';
+import * as magma from './src/sumber/magma.js';
 
 const AKAR = fileURLToPath(new URL('.', import.meta.url));
 const PUBLIK = join(AKAR, 'public');
@@ -31,6 +32,20 @@ let sedangKumpul = false;
 // Hasil per titik yang dibulatkan, ditahan 10 menit supaya Open-Meteo tidak
 // ditanya berulang untuk koordinat yang sama. Hanya di memori.
 const cacheLokasi = new Map();
+
+// Bingkai kamera diperbarui MAGMA sekitar satu menit sekali, jadi disinggahkan
+// 45 detik: cukup segar untuk disebut pemantauan langsung, cukup jarang untuk
+// tidak membebani server mereka berapa pun jumlah pembaca halaman ini.
+let cacheCctv = { pada: 0, kamera: [], galat: null };
+async function ambilCctv() {
+  if (Date.now() - cacheCctv.pada < 45_000 && cacheCctv.kamera.length) return cacheCctv;
+  try {
+    cacheCctv = { pada: Date.now(), kamera: await magma.cctv(CONFIG.gunung.kodeMagma), galat: null };
+  } catch (e) {
+    cacheCctv = { pada: Date.now(), kamera: cacheCctv.kamera, galat: String(e.message).slice(0, 200) };
+  }
+  return cacheCctv;
+}
 
 async function segarkan() {
   if (sedangKumpul) return;
@@ -84,6 +99,30 @@ const srv = createServer(async (req, res) => {
     return kirim(res, sehat ? 200 : 503, MIME['.json'], badan);
   }
 
+  // Kamera pemantau: satu daftar + satu berkas JPEG per kamera, disajikan dari
+  // singgahan sendiri supaya peramban pembaca tidak menembak MAGMA langsung.
+  if (url.pathname === '/api/cctv') {
+    const c = await ambilCctv();
+    const badan = Buffer.from(
+      JSON.stringify({
+        diambil: new Date(c.pada).toISOString(),
+        galat: c.galat,
+        lisensi: 'CC BY-NC-ND 4.0 — PVMBG, Badan Geologi KESDM',
+        sumberUrl: `https://magma.esdm.go.id/v1/gunung-api/cctv/${CONFIG.gunung.kodeMagma}`,
+        kamera: c.kamera.map((k) => ({ id: k.id, nama: k.nama, bytes: k.jpeg.length })),
+      })
+    );
+    return kirim(res, c.kamera.length ? 200 : 503, MIME['.json'], badan, { 'Cache-Control': 'no-cache' });
+  }
+
+  const mCctv = url.pathname.match(/^\/api\/cctv\/(\d{1,2})\.jpg$/);
+  if (mCctv) {
+    const c = await ambilCctv();
+    const k = c.kamera[Number(mCctv[1])];
+    if (!k) return kirim(res, 404, 'text/plain', Buffer.from('kamera tidak ada'));
+    return kirim(res, 200, 'image/jpeg', k.jpeg, { 'Cache-Control': 'public, max-age=40' });
+  }
+
   // Lokasi perangkat. Sengaja POST, bukan query string: koordinat tidak boleh
   // mendarat di access log, riwayat peramban, atau header Referer.
   // Hasilnya tidak disimpan di mana pun.
@@ -132,14 +171,27 @@ const srv = createServer(async (req, res) => {
   try {
     const st = await stat(berkas);
     if (!st.isFile()) throw new Error('bukan berkas');
+
+    // ETag dari ukuran + waktu ubah. Tanpa validator, `no-cache` saja tidak cukup:
+    // peramban tidak punya cara memeriksa kesegaran dan tetap memakai salinan lama.
+    // Ini pernah membuat perbaikan halaman tidak sampai ke pembaca.
+    const etag = `W/"${st.size.toString(16)}-${st.mtimeMs.toString(36)}"`;
+    // Aset dipanggil dengan ?v=… yang ikut berubah tiap rilis, jadi boleh disimpan
+    // lama. Halaman induknya tidak: ia yang menentukan versi aset mana yang dipakai.
+    const berversi = url.searchParams.has('v');
+    const cache = berversi ? 'public, max-age=31536000, immutable' : 'no-cache';
+
+    if (req.headers['if-none-match'] === etag) {
+      res.writeHead(304, { ETag: etag, 'Cache-Control': cache });
+      return res.end();
+    }
+
     const isi = await readFile(berkas);
     const tipe = MIME[extname(berkas)] || 'application/octet-stream';
-    // Halaman, skrip, dan gaya tidak boleh basi: perbaikan pada halaman peringatan
-    // harus sampai ke pembaca pada muat berikutnya, bukan sejam kemudian.
-    const cache = /\.(html|js|css)$/.test(berkas) ? 'no-cache' : 'public, max-age=3600';
+    const kepala = { 'Cache-Control': cache, ETag: etag };
     if (terimaGzip && /text|json|javascript|svg/.test(tipe))
-      return kirim(res, 200, tipe, gzipSync(isi), { 'Content-Encoding': 'gzip', 'Cache-Control': cache });
-    return kirim(res, 200, tipe, isi, { 'Cache-Control': cache });
+      return kirim(res, 200, tipe, gzipSync(isi), { ...kepala, 'Content-Encoding': 'gzip' });
+    return kirim(res, 200, tipe, isi, kepala);
   } catch {
     return kirim(res, 404, 'text/plain; charset=utf-8', Buffer.from('tidak ditemukan'));
   }

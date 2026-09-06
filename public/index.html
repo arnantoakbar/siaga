@@ -4,22 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Siaga — Kondisi Anak Krakatau hari ini</title>
-<meta name="description" content="Status Anak Krakatau, sebaran abu vulkanik, kualitas udara per kota, dan apa yang harus dilakukan. Data resmi PVMBG dan BMKG digabung dengan perbincangan publik, lengkap dengan waktu tiap informasi.">
+<meta name="description" content="Status Anak Krakatau, kamera pemantau, sebaran abu, kualitas udara per kota, dan apa yang harus dilakukan. Data resmi PVMBG dan BMKG digabung dengan perbincangan publik, lengkap dengan waktu tiap informasi.">
 <meta name="theme-color" content="#FFF8F0" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14110F" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="ikon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="gaya.css?v=8">
+<link rel="stylesheet" href="gaya.css?v=17">
+<script>
+  // Dijalankan sebelum halaman digambar supaya tema tidak berkedip saat dimuat.
+  try {
+    const t = new URLSearchParams(location.search).get('tema') || localStorage.getItem('siaga.tema');
+    if (t === 'terang' || t === 'gelap') document.documentElement.setAttribute('data-tema', t);
+  } catch {}
+</script>
 </head>
 <body>
 
-<!-- Ikon digambar sendiri, satu ketebalan garis 1.6px. Tidak ada emoji sebagai ikon. -->
+<!-- Ikon digambar sendiri, satu ketebalan garis 1.6 px. Tidak ada emoji sebagai ikon. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <g id="i-gunung" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 20h20L14.5 6.5a1.6 1.6 0 0 0-2.7 0L9 11l-1.6-1.2L2 20Z"/><path d="M10.2 12.6 12 10.8l1.8 1.8"/>
   </g>
-  <g id="i-angin" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M3 8h9.5a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 12h13a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 16h6.5a2.5 2.5 0 1 1-2.5 2.5"/>
+  <g id="i-pin" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 21.2s6.6-5.6 6.6-10.5a6.6 6.6 0 1 0-13.2 0C5.4 15.6 12 21.2 12 21.2Z"/><circle cx="12" cy="10.6" r="2.5"/>
+  </g>
+  <g id="i-orang" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="8" r="3.6"/><path d="M4.8 20.4a7.2 7.2 0 0 1 14.4 0"/>
+  </g>
+  <g id="i-buku" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 4.8h6a3 3 0 0 1 3 3v11.4a2.4 2.4 0 0 0-2.4-2.4H4V4.8Z"/><path d="M20 4.8h-6a3 3 0 0 0-3 3v11.4a2.4 2.4 0 0 1 2.4-2.4H20V4.8Z"/>
+  </g>
+  <g id="i-lapis" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m12 3.4 8.6 4.4L12 12.2 3.4 7.8 12 3.4Z"/><path d="m3.4 12.2 8.6 4.4 8.6-4.4"/><path d="m3.4 16.6 8.6 4.4 8.6-4.4"/>
+  </g>
+  <g id="i-main" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.5 4.6 19 12 6.5 19.4V4.6Z"/>
   </g>
   <g id="i-awas" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 4.2 2.6 19.2a1 1 0 0 0 .86 1.5h17.08a1 1 0 0 0 .86-1.5L12 4.2Z"/><path d="M12 10v4.2"/><path d="M12 17.4h.01"/>
@@ -36,120 +55,231 @@
   <g id="i-info" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="8.6"/><path d="M12 11.4v5"/><path d="M12 8.1h.01"/>
   </g>
-  <g id="i-pin" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 21.2s6.6-5.6 6.6-10.5a6.6 6.6 0 1 0-13.2 0C5.4 15.6 12 21.2 12 21.2Z"/><circle cx="12" cy="10.6" r="2.5"/>
-  </g>
-  <g id="i-lapis" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="m12 3.4 8.6 4.4L12 12.2 3.4 7.8 12 3.4Z"/><path d="m3.4 12.2 8.6 4.4 8.6-4.4"/><path d="m3.4 16.6 8.6 4.4 8.6-4.4"/>
-  </g>
-  <g id="i-main" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M6.5 4.6 19 12 6.5 19.4V4.6Z"/>
-  </g>
   <g id="i-perisai" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 3.2 4.6 6v6.1c0 4.3 3 8 7.4 8.9 4.4-.9 7.4-4.6 7.4-8.9V6L12 3.2Z"/>
+  </g>
+  <g id="i-panah" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.4 5.6 15.8 12l-6.4 6.4"/>
+  </g>
+  <!-- ikon tindakan -->
+  <g id="i-masker" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M5.6 8.4h12.8v4.2a6.4 6.4 0 0 1-12.8 0V8.4Z"/><path d="M5.6 9.6 2.6 7.8v6.6l3-1.4M18.4 9.6l3-1.8v6.6l-3-1.4"/><path d="M8.4 12.2h7.2M9 15.2h6"/>
+  </g>
+  <g id="i-mata" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.4 12S6 5.6 12 5.6 21.6 12 21.6 12 18 18.4 12 18.4 2.4 12 2.4 12Z"/><circle cx="12" cy="12" r="2.9"/>
+  </g>
+  <g id="i-air" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.4s6 6.2 6 10.1a6 6 0 0 1-12 0c0-3.9 6-10.1 6-10.1Z"/>
+  </g>
+  <g id="i-mobil" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 15.2v-2.4l1.8-4.4a2 2 0 0 1 1.85-1.2h9.9a2 2 0 0 1 1.85 1.2l1.8 4.4v2.4"/><path d="M3.4 15.2h17.2v2.2h-3v-2.2M6.4 17.4v-2.2h-3"/><circle cx="7.4" cy="12.6" r="1"/><circle cx="16.6" cy="12.6" r="1"/>
+  </g>
+  <g id="i-atap" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.6 11.4 12 4.2l9.4 7.2"/><path d="M5.4 13.2v6.6h13.2v-6.6"/>
+  </g>
+  <g id="i-hewan" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.4 9.6c0 4 2.5 7.2 5.6 7.2s5.6-3.2 5.6-7.2"/><path d="M6.4 9.6 4.6 5.2l3.4 1.8M17.6 9.6l1.8-4.4-3.4 1.8"/><path d="M9.6 11.4h.01M14.4 11.4h.01"/><path d="M12 17v3"/>
+  </g>
+  <g id="i-jendela" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4.2" y="4.2" width="15.6" height="15.6" rx="1.6"/><path d="M12 4.2v15.6M4.2 12h15.6"/>
+  </g>
+  <g id="i-lari" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="14.6" cy="5" r="2.1"/><path d="m8.4 20.4 2.4-4.6-2.6-2.6.9-4.6 3.5-1.2 2.7 2.9 3.1.9"/><path d="m11 13.2-3.6 1.1-2.8-1.9"/><path d="m13.2 15.8 2 4.6"/>
+  </g>
+  <g id="i-rumah" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.6 10.6 12 3.8l8.4 6.8v8.2a1.4 1.4 0 0 1-1.4 1.4H5a1.4 1.4 0 0 1-1.4-1.4v-8.2Z"/><path d="M9.6 20.2v-6.4h4.8v6.4"/>
+  </g>
+  <g id="i-hati" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 20.2S3.8 15.4 3.8 9.8a4.4 4.4 0 0 1 8.2-2.2 4.4 4.4 0 0 1 8.2 2.2c0 5.6-8.2 10.4-8.2 10.4Z"/>
+  </g>
+  <g id="i-perahu" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 15.6h18l-2.6 4.2H5.6L3 15.6Z"/><path d="M12 15.6V4.2l6 8.2H6.6"/>
+  </g>
+  <g id="i-kamera" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.4 7.4h4l1.4-2h6.4l1.4 2h4v11.2H3.4V7.4Z"/><circle cx="12" cy="12.6" r="3.4"/>
+  </g>
+  <g id="i-terang" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.4M12 19v2.4M4.4 12H2M22 12h-2.4M6.4 6.4 4.7 4.7M19.3 19.3l-1.7-1.7M17.6 6.4l1.7-1.7M4.7 19.3l1.7-1.7"/>
+  </g>
+  <g id="i-gelap" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.4 13.6A8.6 8.6 0 0 1 10.4 3.6a8.6 8.6 0 1 0 10 10Z"/>
+  </g>
+  <g id="i-sistem" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.6" y="4.4" width="18.8" height="12.4" rx="1.8"/><path d="M8.4 20.4h7.2"/>
   </g>
 </defs></svg>
 
 <header class="kepala">
   <div class="wadah kepala-isi">
     <a class="merek" href="/"><b>Siaga</b><span>Anak Krakatau</span></a>
-    <div class="segar" id="segar" data-usia="baru" title="Waktu pengambilan data terakhir">
-      <span class="titik"></span><span id="segar-teks">memuat…</span>
+    <div class="kepala-kanan">
+      <button class="tombol-tema" id="tombol-tema" type="button" aria-label="Ganti tema"></button>
+      <div class="segar" id="segar" data-usia="baru" title="Waktu pengambilan data terakhir">
+        <span class="titik"></span><span id="segar-teks">memuat…</span>
+      </div>
     </div>
   </div>
 </header>
 
+<nav class="tab-utama" id="tab-utama" aria-label="Bagian halaman">
+  <div class="wadah tab-baris-utama">
+    <button class="tab-u" data-ke="situasi" aria-current="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gunung"/></svg><span>Situasi</span>
+    </button>
+    <button class="tab-u" data-ke="lokasi">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg><span>Lokasimu</span>
+    </button>
+    <button class="tab-u" data-ke="dampak">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-orang"/></svg><span>Dampak</span>
+    </button>
+    <button class="tab-u" data-ke="sumber">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-buku"/></svg><span>Sumber</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Selalu terlihat di semua tab: dua angka yang paling menentukan keputusan. -->
+<div class="strip" id="strip" hidden>
+  <div class="wadah strip-isi">
+    <button class="strip-sisi" type="button" data-ke="situasi" id="strip-gunung"></button>
+    <button class="strip-sisi" type="button" data-ke="dampak" id="strip-kota"></button>
+  </div>
+</div>
+
+<p class="galat-atas" id="galat-atas" hidden role="alert"></p>
+
+
 <main id="utama">
-  <section class="wadah vonis" id="vonis" aria-live="polite">
-    <div class="rangka" style="height:230px"></div>
-  </section>
 
-  <section class="wadah bagian" id="bag-kota">
-    <h2>Kondisi di kota kamu</h2>
-    <p class="sub">Pilih kota terdekat. Statusnya dihitung dari jarak ke kawah, kualitas udara 24 jam terakhir, dan apakah kotamu berada di jalur angin yang membawa abu.</p>
-    <div class="pilih-baris">
-      <label class="hanya-pembaca-layar" for="pilih-kota">Pilih kota</label>
-      <select class="pilih" id="pilih-kota"></select>
-      <button class="cip tombol-lokasi" id="tombol-lokasi" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>Pakai lokasi saya
-      </button>
-    </div>
-    <p class="cap lokasi-kabar" id="lokasi-kabar" hidden></p>
-    <div id="kartu-kota"><div class="rangka" style="height:340px"></div></div>
-  </section>
+  <!-- ══ 1. SITUASI — apa yang terjadi di gunungnya ══ -->
+  <section id="v-situasi" aria-labelledby="j-situasi">
+    <div class="wadah">
+      <h2 class="hanya-pembaca-layar" id="j-situasi">Situasi gunung</h2>
+      <div id="vonis"><div class="rangka" style="height:220px"></div></div>
 
-  <section class="wadah bagian" id="bag-peta">
-    <h2>Ke mana abunya pergi</h2>
-    <p class="sub">Arah angin berbeda di tiap ketinggian, jadi abu dari satu letusan bisa menyebar ke arah yang berlawanan sekaligus. Ketuk lapisan untuk melihat masing-masing.</p>
-    <div class="saring" id="saring-lapisan"></div>
-    <div class="saring saring-peta">
-      <button class="cip cip-alih" id="alih-siaga" type="button" aria-pressed="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lapis"/></svg>Peta Siaga
-      </button>
-      <button class="cip cip-alih" id="alih-windy" type="button" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-main"/></svg>Peta Windy
-      </button>
-    </div>
-    <div class="saring" id="saring-windy" hidden></div>
-    <div class="panel">
-      <div id="peta-wadah"><div class="rangka" style="height:330px"></div></div>
-      <div id="windy-wadah" hidden></div>
-      <div class="keterangan" id="peta-keterangan"></div>
-      <p class="panel-kaki" id="peta-kaki"></p>
-    </div>
-    <details class="tabel-alih"><summary>Lihat sebagai tabel</summary><div id="tabel-kota"></div></details>
-  </section>
+      <h3 class="judul-blok">Kamera pemantau</h3>
+      <p class="sub">Bingkai terbaru dari kamera PVMBG di sekitar kawah. Waktu pengambilan tercetak di dalam gambar oleh kameranya sendiri.</p>
+      <div id="cctv"><div class="rangka" style="height:170px"></div></div>
 
-  <section class="wadah bagian" id="bag-angin">
-    <h2>Angin per ketinggian</h2>
-    <p class="sub">Panah menunjuk ke arah tiupan angin, panjangnya sebanding dengan kecepatan. Ini yang menentukan daerah mana yang kehujanan abu.</p>
-    <div class="panel">
-      <div id="angin-wadah"><div class="rangka" style="height:250px"></div></div>
-      <p class="panel-kaki">Sumber: Open-Meteo, angin pada lapisan tekanan di atas kawah. Ini perkiraan arah, bukan prakiraan resmi sebaran abu.</p>
+      <h3 class="judul-blok">Kegempaan di bawah kawah</h3>
+      <p class="sub">Gempa letusan berarti ada erupsi. Tremor menerus berarti magma masih bergerak.</p>
+      <div class="panel">
+        <div id="gempa-wadah"><div class="rangka" style="height:200px"></div></div>
+        <p class="panel-kaki" id="gempa-kaki"></p>
+      </div>
+
+      <details class="lipat"><summary>Pengamatan visual PVMBG selengkapnya</summary>
+        <div class="lipat-isi" id="visual-lengkap"></div>
+      </details>
     </div>
   </section>
 
-  <section class="wadah bagian" id="bag-udara">
-    <h2>Kualitas udara 24 jam terakhir</h2>
-    <p class="sub" id="udara-sub">PM2.5 adalah partikel halus yang paling berbahaya untuk paru-paru. Garis pemisah warna adalah batas kategori ISPU resmi.</p>
-    <div class="panel">
-      <div id="udara-wadah"><div class="rangka" style="height:230px"></div></div>
-      <p class="panel-kaki">Sumber: Open-Meteo CAMS. Ini keluaran model cuaca global beresolusi sekitar 40 km, bukan sensor pengukur di darat. Angka resmi ada di stasiun pemantau KLHK dan BMKG.</p>
+  <!-- ══ 2. LOKASIMU — di mana kamu berada ══ -->
+  <section id="v-lokasi" hidden aria-labelledby="j-lokasi">
+    <div class="wadah">
+      <h2 id="j-lokasi">Di mana kamu</h2>
+      <p class="sub">Pilih kota terdekat, atau pakai lokasi perangkat. Semua angka di tab Dampak mengikuti pilihan ini.</p>
+      <div class="pilih-baris">
+        <label class="hanya-pembaca-layar" for="pilih-kota">Pilih kota</label>
+        <select class="pilih" id="pilih-kota"><option>Memuat daftar kota…</option></select>
+        <button class="cip tombol-lokasi" id="tombol-lokasi" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>Pakai lokasi saya
+        </button>
+      </div>
+      <p class="cap lokasi-kabar" id="lokasi-kabar" hidden></p>
+      <div id="ringkas-lokasi"></div>
+
+      <h3 class="judul-blok">Ke mana abunya pergi</h3>
+      <p class="sub">Arah angin berbeda di tiap ketinggian, jadi abu dari satu letusan bisa menyebar ke arah yang berlawanan sekaligus.</p>
+      <div class="saring" id="saring-lapisan"></div>
+      <div class="saring saring-peta">
+        <button class="cip cip-alih" id="alih-siaga" type="button" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lapis"/></svg>Peta Siaga
+        </button>
+        <button class="cip cip-alih" id="alih-windy" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-main"/></svg>Peta Windy
+        </button>
+      </div>
+      <div class="saring" id="saring-windy" hidden></div>
+      <div class="panel">
+        <div id="peta-wadah"><div class="rangka" style="height:300px"></div></div>
+        <div id="windy-wadah" hidden></div>
+        <div class="keterangan" id="peta-keterangan"></div>
+        <p class="panel-kaki" id="peta-kaki"></p>
+      </div>
+
+      <details class="lipat"><summary>Semua kota sebagai tabel</summary>
+        <div class="lipat-isi" id="tabel-kota"></div>
+      </details>
+      <details class="lipat"><summary>Angin per ketinggian</summary>
+        <div class="lipat-isi">
+          <div class="panel">
+            <div id="angin-wadah"><div class="rangka" style="height:230px"></div></div>
+            <p class="panel-kaki">Sumber: Open-Meteo, angin pada lapisan tekanan di atas kawah. Perkiraan arah, bukan prakiraan resmi sebaran abu.</p>
+          </div>
+        </div>
+      </details>
     </div>
   </section>
 
-  <section class="wadah bagian" id="bag-gempa">
-    <h2>Kegempaan di bawah kawah</h2>
-    <p class="sub" id="gempa-sub">Seismograf PVMBG merekam getaran di dalam gunung. Gempa letusan berarti ada erupsi; tremor menerus berarti magma masih bergerak.</p>
-    <div class="panel">
-      <div id="gempa-wadah"><div class="rangka" style="height:220px"></div></div>
-      <p class="panel-kaki" id="gempa-kaki"></p>
+  <!-- ══ 3. DAMPAK — artinya buat kamu ══ -->
+  <section id="v-dampak" hidden aria-labelledby="j-dampak">
+    <div class="wadah">
+      <h2 id="j-dampak">Artinya buat kamu</h2>
+      <div id="kartu-dampak"><div class="rangka" style="height:190px"></div></div>
+
+      <h3 class="judul-blok">Yang perlu kamu lakukan</h3>
+      <p class="sub">Ketuk kartu untuk melihat anjuran lengkapnya dan dari mana asalnya.</p>
+      <div id="tindakan"></div>
+
+      <details class="lipat"><summary>Kualitas udara 24 jam terakhir</summary>
+        <div class="lipat-isi">
+          <p class="sub" id="udara-sub">PM2.5 adalah partikel halus yang paling berbahaya untuk paru-paru.</p>
+          <div class="panel">
+            <div id="udara-wadah"><div class="rangka" style="height:220px"></div></div>
+            <p class="panel-kaki">Sumber: Open-Meteo CAMS. Keluaran model cuaca global beresolusi sekitar 40 km, bukan sensor pengukur di darat. Angka resmi ada di stasiun pemantau KLHK dan BMKG.</p>
+          </div>
+        </div>
+      </details>
     </div>
   </section>
 
-  <section class="wadah bagian" id="bag-kabar">
-    <h2>Kabar terbaru</h2>
-    <p class="sub">Dua hal yang berbeda, jangan dicampur: pernyataan badan resmi, dan apa yang sedang ramai dibicarakan.</p>
-    <div class="tab-baris" role="tablist">
-      <button class="tab" role="tab" id="tab-resmi" aria-selected="true" aria-controls="isi-kabar">Resmi</button>
-      <button class="tab" role="tab" id="tab-publik" aria-selected="false" aria-controls="isi-kabar">Perbincangan</button>
+  <!-- ══ 4. SUMBER — dari mana datanya ══ -->
+  <section id="v-sumber" hidden aria-labelledby="j-sumber">
+    <div class="wadah">
+      <h2 id="j-sumber">Dari mana datanya</h2>
+      <p class="sub">Dua hal yang berbeda, jangan dicampur: pernyataan badan resmi, dan apa yang sedang ramai dibicarakan.</p>
+      <div class="tab-baris" role="tablist">
+        <button class="tab" role="tab" id="tab-resmi" aria-selected="true" aria-controls="isi-kabar">Resmi</button>
+        <button class="tab" role="tab" id="tab-publik" aria-selected="false" aria-controls="isi-kabar">Perbincangan</button>
+      </div>
+      <div id="isi-kabar" role="tabpanel"><div class="rangka" style="height:180px"></div></div>
+
+      <h3 class="judul-blok">Kesehatan sumber</h3>
+      <p class="sub">Kalau ada sumber yang mati, kamu berhak tahu — supaya tidak menganggap halaman ini lengkap padahal tidak.</p>
+      <ul class="sumber" id="daftar-sumber"></ul>
+
+      <details class="lipat"><summary>Bagaimana kesimpulannya dihitung</summary>
+        <div class="lipat-isi">
+          <p>Tanpa LLM. Status kota diambil dari yang paling tinggi di antara tiga aturan:</p>
+          <ol>
+            <li><b>Zona larangan.</b> Radius dibaca dari teks rekomendasi PVMBG, bukan angka karangan. Di dalam radius berarti bahaya.</li>
+            <li><b>Kualitas udara.</b> ISPU dari rata-rata bergerak 24 jam PM2.5, PM10, dan SO₂, interpolasi antar titik patah Permen LHK No. P.14/2020, parameter dominan yang menentukan.</li>
+            <li><b>Jalur sebaran abu.</b> Kota dianggap di jalur kalau arahnya dari kawah berada dalam ±35° dari arah tiupan angin di salah satu lapisan ketinggian, dan jaraknya di bawah 400 km.</li>
+          </ol>
+          <p>Status gunung dan status kota tidak dicampur. Kota jauh dengan udara bersih tidak jadi siaga hanya karena gunungnya Level III. Kalau data sumbernya tidak ada, keluarannya kosong — bukan diisi nilai default yang kelihatan meyakinkan.</p>
+        </div>
+      </details>
     </div>
-    <div id="isi-kabar" role="tabpanel"><div class="rangka" style="height:200px"></div></div>
   </section>
 
-  <section class="wadah bagian" id="bag-sumber">
-    <h2>Dari mana datanya</h2>
-    <p class="sub">Kalau ada sumber yang mati, kamu berhak tahu — supaya tidak menganggap halaman ini lengkap padahal tidak.</p>
-    <ul class="sumber" id="daftar-sumber"></ul>
-  </section>
+  <footer class="wadah kaki">
+    <p><b>Halaman ini bukan pengganti pengumuman resmi.</b> Untuk keputusan evakuasi, ikuti BPBD kabupaten/kota dan PVMBG. Status gunung dan rekomendasi di sini disalin apa adanya dari laporan PVMBG, tidak ditambah dan tidak ditafsirkan.</p>
+    <p>Sumber: <a href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas" rel="noopener">MAGMA Indonesia (PVMBG, Badan Geologi KESDM)</a> · <a href="https://data.bmkg.go.id/gempabumi/" rel="noopener">BMKG</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> · Google News. Kategori ISPU mengikuti Permen LHK No. P.14/2020.</p>
+    <p id="kaki-waktu"></p>
+  </footer>
 </main>
 
-<footer class="wadah kaki">
-  <p><b>Halaman ini bukan pengganti pengumuman resmi.</b> Untuk keputusan evakuasi, ikuti BPBD kabupaten/kota dan PVMBG. Status gunung dan rekomendasi di sini disalin apa adanya dari laporan PVMBG, tidak ditambah dan tidak ditafsirkan.</p>
-  <p>Sumber: <a href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas" rel="noopener">MAGMA Indonesia (PVMBG, Badan Geologi KESDM)</a> · <a href="https://data.bmkg.go.id/gempabumi/" rel="noopener">BMKG</a> · <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> · Google News. Kategori ISPU mengikuti Permen LHK No. P.14/2020.</p>
-  <p id="kaki-waktu"></p>
-</footer>
-
-<script src="app.js?v=8" type="module"></script>
+<script src="app.js?v=17" type="module"></script>
 </body>
 </html>

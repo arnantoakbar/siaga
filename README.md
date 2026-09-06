@@ -14,48 +14,54 @@ pada setiap potong informasi supaya pembaca tahu apakah masih berlaku.
 
 ---
 
+## Cara membacanya
+
+Halaman ini dibagi empat tampilan yang mengikuti urutan pertanyaan pembaca. Hanya satu
+tampilan aktif, jadi tidak ada gulungan panjang: dari 6.300 piksel dalam satu halaman
+menjadi sekitar 1.700–1.900 piksel per tampilan.
+
+| Tab | Menjawab | Isinya |
+|---|---|---|
+| **Situasi** | Apa yang sedang terjadi di gunungnya? | Level dan rekomendasi PVMBG, kamera pemantau, kegempaan |
+| **Lokasimu** | Di mana aku, dan ke mana abunya? | Pemilih kota atau lokasi perangkat, peta sebaran, angin per ketinggian |
+| **Dampak** | Artinya apa buat aku? | Status kota, ISPU, infografis tindakan, kualitas udara 24 jam |
+| **Sumber** | Dari mana angka ini? | Kabar resmi vs perbincangan, kesehatan tiap sumber, cara perhitungan |
+
+Navigasinya di **bawah layar pada ponsel** supaya terjangkau jempol, dan pindah ke atas
+pada layar lebar. Di atasnya ada **strip status yang selalu terlihat di tab mana pun** —
+level gunung dan status kotamu, dua angka yang paling menentukan keputusan. Rincian yang
+tidak semua orang butuhkan disimpan di balik lipatan.
+
 ## Tampilan
 
-| Vonis utama (gelap) | Kondisi kota kamu | Peta sebaran abu |
+| Situasi | Kamera pemantau | Lokasimu |
 |---|---|---|
-| ![Vonis](docs/01-vonis-mobile.png) | ![Kota](docs/02-kota-mobile.png) | ![Peta](docs/03-peta-mobile.png) |
+| ![Situasi](docs/01-situasi-mobile.png) | ![CCTV](docs/02-cctv-mobile.png) | ![Lokasi](docs/03-lokasi-mobile.png) |
 
-**Peta sebaran abu — desktop**
+| Dampak | Infografis tindakan | Sumber |
+|---|---|---|
+| ![Dampak](docs/04-dampak-mobile.png) | ![Tindakan](docs/05-tindakan-mobile.png) | ![Sumber](docs/06-sumber-mobile.png) |
 
-![Peta desktop](docs/05-peta-desktop.png)
+**Situasi — layar lebar.** Navigasi naik ke atas, kamera jadi tiga kolom.
 
-Juring menunjukkan sejauh mana abu terbawa dalam 6 jam pada kecepatan angin saat itu,
-melebar 35° ke kiri dan kanan. Empat juring karena arah angin berbeda di tiap
-ketinggian — abu di 3 km bisa ke tenggara sementara abu di 10 km ke barat. Titik kota
-diwarnai menurut status, cincin putus-putus adalah jarak dari kawah.
+![Situasi desktop](docs/08-situasi-desktop.png)
 
-**Angin per ketinggian**
+**Peta sebaran abu.** Juring menunjukkan sejauh mana abu terbawa dalam 6 jam pada
+kecepatan angin saat itu, melebar 35° ke kiri dan kanan. Empat juring karena arah angin
+berbeda di tiap ketinggian — abu di 3 km bisa ke tenggara sementara abu di 10 km ke barat.
 
-![Angin](docs/06-angin-desktop.png)
+![Peta desktop](docs/09-peta-desktop.png)
 
-**Kualitas udara 24 jam & kegempaan**
-
-| Udara | Kegempaan |
+| Lokasi perangkat | Lapisan Windy |
 |---|---|
-| ![Udara](docs/07-udara-desktop.png) | ![Kegempaan](docs/08-gempa-desktop.png) |
+| ![Lokasi perangkat](docs/11-lokasi-perangkat.png) | ![Windy](docs/12-windy-desktop.png) |
 
-**Kabar resmi vs perbincangan, dan kesehatan sumber**
+Mode terang mengikuti pengaturan perangkat, dan bisa dikunci lewat tombol di kanan atas
+(ikut perangkat → terang → gelap):
 
-| Kabar | Sumber |
+| Terang | Dampak, layar lebar |
 |---|---|
-| ![Kabar](docs/09-kabar-desktop.png) | ![Sumber](docs/10-sumber-desktop.png) |
-
-**Lokasi perangkat & lapisan Windy**
-
-| Deteksi lokasi | Peta Windy |
-|---|---|
-| ![Lokasi](docs/11-lokasi-mobile.png) | ![Windy](docs/12-windy-desktop.png) |
-
-Mode terang mengikuti pengaturan sistem pembaca:
-
-![Terang](docs/04-vonis-terang.png)
-
----
+| ![Terang](docs/07-situasi-terang.png) | ![Dampak desktop](docs/10-dampak-desktop.png) |
 
 ## Sumber data
 
@@ -66,6 +72,7 @@ Semua ditarik di sisi server tiap 10 menit. Tidak ada satu pun yang butuh kunci 
 | **MAGMA Indonesia / PVMBG** — [tingkat aktivitas](https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas) | Level gunung (I–IV) seluruh gunung api | Baca HTML (server-rendered) | ✅ jalan |
 | **MAGMA / PVMBG** — laporan pengamatan 6 jam | Visual, kegempaan per jenis, **rekomendasi resmi**, radius larangan | Baca HTML lewat tautan bertanda tangan dari tabel di atas | ✅ jalan |
 | **MAGMA / PVMBG** — laporan harian | Ringkasan harian | Baca HTML | ✅ jalan |
+| **MAGMA / PVMBG** — kamera pemantau | 6 kamera di sekitar kawah Anak Krakatau | Baca HTML, bingkai tersemat sebagai JPEG base64 | ✅ jalan |
 | **BMKG** — [`autogempa.json`](https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json) dll. | Gempa tektonik (dipisahkan dari gempa vulkanik) | JSON publik | ✅ jalan |
 | **Open-Meteo Air Quality (CAMS)** | PM2.5 / PM10 / SO₂ per kota → ISPU | JSON publik | ✅ jalan |
 | **Open-Meteo Forecast** | Angin pada 850/700/500/250 hPa di atas kawah | JSON publik | ✅ jalan |
@@ -185,6 +192,26 @@ kelihatan meyakinkan.
 
 ---
 
+## Kamera pemantau
+
+PVMBG memasang enam kamera di sekitar Anak Krakatau: **Pos PGA, Lava93, Sertung Bawah,
+Sertung Selatan, Sertung Selatan (IR), dan Pulau Panjang.** Halaman daftar MAGMA
+menyematkan bingkai terbaru tiap kamera sebagai JPEG base64, jadi tidak ada yang perlu
+ditembus — yang dibaca persis gambar yang MAGMA tampilkan sendiri.
+
+- **Bingkai diperbarui sekitar satu menit sekali.** Waktu pengambilan tercetak di dalam
+  gambar oleh kameranya, jadi bisa diperiksa langsung tanpa percaya halaman ini.
+- **Ukurannya 150 × 84 piksel** dan itu memang yang disediakan halaman publik. Gambar
+  penuh ada di balik endpoint ber-CSRF Laravel dan sengaja tidak diambil.
+- **Disajikan dari server sendiri** (`/api/cctv/<n>.jpg`, singgahan 45 detik), supaya
+  peramban pembaca tidak menembak MAGMA satu per satu dan tanda tangan URL mereka tidak
+  bocor ke klien. Berapa pun jumlah pembaca, MAGMA ditanya paling sering 45 detik sekali.
+- **Lisensi CC BY-NC-ND 4.0, PVMBG Badan Geologi.** Gambar disajikan apa adanya, tanpa
+  modifikasi, dengan atribusi dan tautan balik di bawah setiap grid. Kalau kamu memakai
+  proyek ini untuk sesuatu yang komersial, lisensi itu tidak mengizinkannya.
+
+---
+
 ## Lokasi perangkat
 
 Tombol **"Pakai lokasi saya"** memakai geolocation peramban untuk mengganti pilihan kota
@@ -207,6 +234,21 @@ Yang dilakukan supaya ini tidak jadi kebocoran data:
   kembali ke pemilih kota.
 
 Halaman tetap berfungsi penuh tanpa izin lokasi. Fiturnya percepatan, bukan syarat.
+
+---
+
+## Tema
+
+Bawaannya mengikuti pengaturan perangkat (`prefers-color-scheme`). Tombol di kanan atas
+memutar tiga keadaan: **ikut perangkat → terang → gelap**, dan pilihannya diingat di
+`localStorage`. Tema juga bisa dipaksa lewat `?tema=terang` atau `?tema=gelap` untuk
+berbagi tautan atau mengambil tangkapan layar.
+
+Mode gelap bukan pembalikan otomatis: langkah warnanya dipilih ulang untuk latar gelap
+dan diuji ulang. Orang memeriksa status gunung jam dua pagi.
+
+Tidak ada kedipan saat halaman dimuat — atribut temanya dipasang oleh skrip kecil di
+`<head>` sebelum halaman digambar.
 
 ---
 
@@ -261,6 +303,16 @@ scripts/
   garis-pantai.mjs     buat ulang coastline.json dari Natural Earth (sekali jalan)
 docs/threads.md        cara mendapatkan token Threads, berikut batasannya
 ```
+
+**Cache yang benar.** Halaman induk disajikan `no-cache` **berikut ETag**, aset dipanggil
+dengan `?v=…` dan disajikan `immutable` setahun. Tanpa ETag, `no-cache` saja tidak cukup:
+peramban tidak punya cara memeriksa kesegaran dan tetap memakai salinan lama — ini pernah
+membuat perbaikan halaman tidak sampai ke pembaca selama pengembangan.
+
+**Muat pertama punya percobaan ulang.** Kalau permintaan jatuh tepat saat server sedang
+mengumpulkan data (503), halaman mencoba lagi dengan jeda naik bertahap sampai 30 detik
+dan menampilkan spanduk yang menyebutkan apa yang terjadi — bukan menggantung sampai
+penyegaran lima menit.
 
 **Nol dependensi npm.** Node 25 sudah membawa `fetch`, `node:sqlite`, `node:http`, dan
 `WebSocket`. Tidak ada `npm install`, tidak ada rantai pasok yang perlu dijaga, dan
@@ -379,6 +431,8 @@ memasang cookie. Satu-satunya yang disimpan di peramban adalah kota pilihan tera
 |---|---|
 | `GET /api/terkini` | Seluruh potret: status, kota, angin, kabar, kesehatan sumber |
 | `GET /api/kesehatan` | Ringkas untuk pemantauan. Balas 503 kalau potret lebih tua dari 3× interval |
+| `GET /api/cctv` | Daftar kamera + waktu pengambilan + lisensi |
+| `GET /api/cctv/<n>.jpg` | Bingkai terbaru satu kamera |
 | `POST /api/lokasi` | Analisa untuk satu titik. Badan `{"lat":-6.92,"lon":107.62}`. Tidak menyimpan apa pun |
 | `POST /api/segarkan` | Paksa pengumpulan ulang sekarang |
 

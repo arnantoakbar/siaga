@@ -102,6 +102,42 @@ export async function laporan(url) {
   };
 }
 
+/**
+ * Kamera pemantau MAGMA. Halaman daftar menyematkan bingkai terbaru tiap kamera
+ * sebagai JPEG base64, jadi tidak perlu menembus apa pun: yang dibaca persis
+ * gambar yang ditampilkan MAGMA sendiri.
+ *
+ * Ukurannya 150x84 dan itu memang yang disediakan halaman publik. Gambar penuh
+ * ada di balik endpoint ber-CSRF Laravel dan sengaja tidak diambil.
+ * Bingkai diperbarui sekitar satu menit sekali — waktu pengambilannya tercetak
+ * di dalam gambar oleh kameranya sendiri.
+ *
+ * Lisensi: CC BY-NC-ND 4.0, PVMBG Badan Geologi. Gambar disajikan apa adanya,
+ * dengan atribusi, tanpa modifikasi.
+ */
+export async function cctv(kode) {
+  const html = await ambil(`${BASE}/cctv/${kode}`);
+  const potong = html.split(/<img class="img-fit-cover"\s+src="data:image\/jpeg;base64,/);
+  const keluar = [];
+  for (const [i, bagian] of potong.slice(1).entries()) {
+    // Catatan: String.prototype.split(sep, limit) di JS MEMBUANG sisa string,
+    // tidak seperti maxsplit di Python. Jadi pemotongannya dilakukan manual.
+    const batas = bagian.indexOf('"');
+    if (batas < 0) continue;
+    const b64 = bagian.slice(0, batas);
+    const sisa = bagian.slice(batas + 1);
+    const nama = (sisa.match(/<small class="text-right">\s*([^<]{3,90}?)\s*<\/small>/) || [])[1];
+    if (!b64) continue;
+    keluar.push({
+      id: String(i),
+      nama: unesc(nama || `Kamera ${i + 1}`).trim(),
+      jpeg: Buffer.from(b64, 'base64'),
+    });
+  }
+  if (!keluar.length) throw new Error('MAGMA: tidak ada bingkai kamera terbaca');
+  return keluar;
+}
+
 /** Ringkasan harian per gunung (visual / kegempaan / rekomendasi). */
 export async function laporanHarian(namaGunung) {
   const html = await ambil(`${BASE}/laporan-harian`);

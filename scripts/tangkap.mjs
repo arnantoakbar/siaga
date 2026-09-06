@@ -16,32 +16,34 @@ const CHROME =
 const PORT = 9333;
 
 const ADEGAN = [
-  { nama: '01-vonis-mobile',   w: 390,  h: 844,  dsf: 3, tema: 'gelap',  ke: '#vonis' },
-  { nama: '02-kota-mobile',    w: 390,  h: 900,  dsf: 3, tema: 'gelap',  ke: '#bag-kota' },
-  { nama: '03-peta-mobile',    w: 390,  h: 980,  dsf: 3, tema: 'gelap',  ke: '#bag-peta' },
-  { nama: '04-vonis-terang',   w: 390,  h: 844,  dsf: 3, tema: 'terang', ke: '#vonis' },
-  { nama: '05-peta-desktop',   w: 1100, h: 900,  dsf: 2, tema: 'terang', ke: '#bag-peta' },
-  { nama: '06-angin-desktop',  w: 1100, h: 780,  dsf: 2, tema: 'terang', ke: '#bag-angin' },
-  { nama: '07-udara-desktop',  w: 1100, h: 720,  dsf: 2, tema: 'gelap',  ke: '#bag-udara' },
-  { nama: '08-gempa-desktop',  w: 1100, h: 820,  dsf: 2, tema: 'gelap',  ke: '#bag-gempa' },
-  { nama: '09-kabar-desktop',  w: 1100, h: 900,  dsf: 2, tema: 'terang', ke: '#bag-kabar' },
-  { nama: '10-sumber-desktop', w: 1100, h: 760,  dsf: 2, tema: 'gelap',  ke: '#bag-sumber' },
+  { nama: '01-situasi-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi' },
+  { nama: '02-cctv-mobile',    w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi', gulir: 720 },
+  { nama: '03-lokasi-mobile',  w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'lokasi', gulir: 430 },
+  { nama: '04-dampak-mobile',  w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'dampak' },
   {
-    nama: '11-lokasi-mobile', w: 390, h: 980, dsf: 3, tema: 'gelap', ke: '#bag-kota',
+    nama: '05-tindakan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'dampak', gulir: 640,
+    siapkan: `document.querySelectorAll('.petak-sel')[2]?.click();`, jeda: 700,
+  },
+  { nama: '06-sumber-mobile',  w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'sumber' },
+  { nama: '07-situasi-terang', w: 390, h: 900, dsf: 3, tema: 'terang', tab: 'situasi' },
+  { nama: '08-situasi-desktop',w: 1100, h: 900, dsf: 2, tema: 'terang', tab: 'situasi' },
+  { nama: '09-peta-desktop',   w: 1100, h: 940, dsf: 2, tema: 'terang', tab: 'lokasi', gulir: 300 },
+  { nama: '10-dampak-desktop', w: 1100, h: 900, dsf: 2, tema: 'gelap', tab: 'dampak' },
+  {
+    nama: '11-lokasi-perangkat', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'lokasi',
     // Chrome headless tidak punya lokasi sungguhan; getCurrentPosition diganti
     // koordinat Bandung supaya alurnya bisa dipotret apa adanya.
     siapkan: `navigator.geolocation.getCurrentPosition = (ok) =>
         ok({ coords: { latitude: -6.9175123, longitude: 107.6191456 } });
       document.querySelector('#tombol-lokasi').click();`,
-    jeda: 3000,
+    jeda: 3200,
   },
   {
-    nama: '12-windy-desktop', w: 1100, h: 980, dsf: 2, tema: 'gelap', ke: '#bag-peta',
+    nama: '12-windy-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'lokasi', gulir: 240,
     // Persetujuan harus lewat tombolnya: menulis localStorage saja tidak cukup,
     // karena nilainya sudah dibaca ke memori saat skrip halaman dimuat.
     siapkan: `document.querySelector('#alih-windy').click();
-      document.querySelector('#windy-setuju').click();
-      [...document.querySelectorAll('#saring-windy .cip')].find(b => b.textContent === 'Aerosol').click();`,
+      document.querySelector('#windy-setuju').click();`,
     jeda: 9000,
   },
 ];
@@ -98,15 +100,14 @@ try {
     await cdp.kirim('Emulation.setDeviceMetricsOverride', {
       width: a.w, height: a.h, deviceScaleFactor: a.dsf, mobile: a.w < 700,
     });
-    await cdp.kirim('Page.navigate', { url: `${DASAR}/?tema=${a.tema}` });
-    await tidur(3200); // muat data + gambar SVG
+    await cdp.kirim('Page.navigate', { url: `${DASAR}/?tema=${a.tema}#${a.tab}` });
+    await tidur(3600); // muat data + gambar SVG
     if (a.siapkan) {
       await cdp.kirim('Runtime.evaluate', { expression: a.siapkan, awaitPromise: false });
       await tidur(a.jeda ?? 1500);
     }
-    await cdp.kirim('Runtime.evaluate', {
-      expression: `document.querySelector(${JSON.stringify(a.ke)})?.scrollIntoView({block:'start'})`,
-    });
+    if (a.gulir)
+      await cdp.kirim('Runtime.evaluate', { expression: `window.scrollTo(0, ${a.gulir})` });
     await tidur(900); // animasi kerucut selesai
 
     const { data } = await cdp.kirim('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
