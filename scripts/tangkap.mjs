@@ -10,6 +10,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 
 const DASAR = process.argv[2] || 'http://localhost:8080';
 const KELUAR = process.argv[3] || 'docs';
+const SARING = process.env.ADEGAN || '';   // ADEGAN=12 node scripts/tangkap.mjs -> hanya adegan cocok
 const CHROME =
   process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9333;
@@ -25,6 +26,24 @@ const ADEGAN = [
   { nama: '08-gempa-desktop',  w: 1100, h: 820,  dsf: 2, tema: 'gelap',  ke: '#bag-gempa' },
   { nama: '09-kabar-desktop',  w: 1100, h: 900,  dsf: 2, tema: 'terang', ke: '#bag-kabar' },
   { nama: '10-sumber-desktop', w: 1100, h: 760,  dsf: 2, tema: 'gelap',  ke: '#bag-sumber' },
+  {
+    nama: '11-lokasi-mobile', w: 390, h: 980, dsf: 3, tema: 'gelap', ke: '#bag-kota',
+    // Chrome headless tidak punya lokasi sungguhan; getCurrentPosition diganti
+    // koordinat Bandung supaya alurnya bisa dipotret apa adanya.
+    siapkan: `navigator.geolocation.getCurrentPosition = (ok) =>
+        ok({ coords: { latitude: -6.9175123, longitude: 107.6191456 } });
+      document.querySelector('#tombol-lokasi').click();`,
+    jeda: 3000,
+  },
+  {
+    nama: '12-windy-desktop', w: 1100, h: 980, dsf: 2, tema: 'gelap', ke: '#bag-peta',
+    // Persetujuan harus lewat tombolnya: menulis localStorage saja tidak cukup,
+    // karena nilainya sudah dibaca ke memori saat skrip halaman dimuat.
+    siapkan: `document.querySelector('#alih-windy').click();
+      document.querySelector('#windy-setuju').click();
+      [...document.querySelectorAll('#saring-windy .cip')].find(b => b.textContent === 'Aerosol').click();`,
+    jeda: 9000,
+  },
 ];
 
 const tidur = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -69,7 +88,7 @@ try {
   console.log(versi.Browser);
   mkdirSync(KELUAR, { recursive: true });
 
-  for (const a of ADEGAN) {
+  for (const a of ADEGAN.filter((x) => !SARING || x.nama.includes(SARING))) {
     const target = await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: 'PUT' }).then((r) => r.json());
     const ws = new WebSocket(target.webSocketDebuggerUrl);
     await new Promise((r) => ws.addEventListener('open', r, { once: true }));
@@ -81,6 +100,10 @@ try {
     });
     await cdp.kirim('Page.navigate', { url: `${DASAR}/?tema=${a.tema}` });
     await tidur(3200); // muat data + gambar SVG
+    if (a.siapkan) {
+      await cdp.kirim('Runtime.evaluate', { expression: a.siapkan, awaitPromise: false });
+      await tidur(a.jeda ?? 1500);
+    }
     await cdp.kirim('Runtime.evaluate', {
       expression: `document.querySelector(${JSON.stringify(a.ke)})?.scrollIntoView({block:'start'})`,
     });

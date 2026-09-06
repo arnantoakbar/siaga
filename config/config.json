@@ -8,34 +8,150 @@
     "wilayah": "Lampung Selatan, Lampung"
   },
   "kota": [
-    { "id": "kalianda",     "nama": "Kalianda",       "provinsi": "Lampung",   "lat": -5.750,  "lon": 105.583 },
-    { "id": "bandarlampung","nama": "Bandar Lampung", "provinsi": "Lampung",   "lat": -5.429,  "lon": 105.261 },
-    { "id": "anyer",        "nama": "Anyer",          "provinsi": "Banten",    "lat": -6.063,  "lon": 105.905 },
-    { "id": "carita",       "nama": "Carita",         "provinsi": "Banten",    "lat": -6.317,  "lon": 105.833 },
-    { "id": "labuan",       "nama": "Labuan",         "provinsi": "Banten",    "lat": -6.379,  "lon": 105.826 },
-    { "id": "cilegon",      "nama": "Cilegon",        "provinsi": "Banten",    "lat": -6.003,  "lon": 106.011 },
-    { "id": "merak",        "nama": "Merak",          "provinsi": "Banten",    "lat": -5.933,  "lon": 105.983 },
-    { "id": "serang",       "nama": "Serang",         "provinsi": "Banten",    "lat": -6.120,  "lon": 106.150 },
-    { "id": "pandeglang",   "nama": "Pandeglang",     "provinsi": "Banten",    "lat": -6.309,  "lon": 106.106 },
-    { "id": "rangkasbitung","nama": "Rangkasbitung",  "provinsi": "Banten",    "lat": -6.360,  "lon": 106.250 },
-    { "id": "tangerang",    "nama": "Tangerang",      "provinsi": "Banten",    "lat": -6.178,  "lon": 106.632 },
-    { "id": "jakarta",      "nama": "Jakarta",        "provinsi": "DKI Jakarta","lat": -6.209, "lon": 106.846 },
-    { "id": "depok",        "nama": "Depok",          "provinsi": "Jawa Barat","lat": -6.403,  "lon": 106.794 },
-    { "id": "bekasi",       "nama": "Bekasi",         "provinsi": "Jawa Barat","lat": -6.238,  "lon": 106.976 },
-    { "id": "bogor",        "nama": "Bogor",          "provinsi": "Jawa Barat","lat": -6.597,  "lon": 106.806 },
-    { "id": "sukabumi",     "nama": "Sukabumi",       "provinsi": "Jawa Barat","lat": -6.928,  "lon": 106.930 },
-    { "id": "bandung",      "nama": "Bandung",        "provinsi": "Jawa Barat","lat": -6.917,  "lon": 107.619 }
+    {
+      "id": "kalianda",
+      "nama": "Kalianda",
+      "provinsi": "Lampung",
+      "lat": -5.75,
+      "lon": 105.583
+    },
+    {
+      "id": "bandarlampung",
+      "nama": "Bandar Lampung",
+      "provinsi": "Lampung",
+      "lat": -5.429,
+      "lon": 105.261
+    },
+    {
+      "id": "anyer",
+      "nama": "Anyer",
+      "provinsi": "Banten",
+      "lat": -6.063,
+      "lon": 105.905
+    },
+    {
+      "id": "carita",
+      "nama": "Carita",
+      "provinsi": "Banten",
+      "lat": -6.317,
+      "lon": 105.833
+    },
+    {
+      "id": "labuan",
+      "nama": "Labuan",
+      "provinsi": "Banten",
+      "lat": -6.379,
+      "lon": 105.826
+    },
+    {
+      "id": "cilegon",
+      "nama": "Cilegon",
+      "provinsi": "Banten",
+      "lat": -6.003,
+      "lon": 106.011
+    },
+    {
+      "id": "merak",
+      "nama": "Merak",
+      "provinsi": "Banten",
+      "lat": -5.933,
+      "lon": 105.983
+    },
+    {
+      "id": "serang",
+      "nama": "Serang",
+      "provinsi": "Banten",
+      "lat": -6.12,
+      "lon": 106.15
+    },
+    {
+      "id": "pandeglang",
+      "nama": "Pandeglang",
+      "provinsi": "Banten",
+      "lat": -6.309,
+      "lon": 106.106
+    },
+    {
+      "id": "rangkasbitung",
+      "nama": "Rangkasbitung",
+      "provinsi": "Banten",
+      "lat": -6.36,
+      "lon": 106.25
+    },
+    {
+      "id": "tangerang",
+      "nama": "Tangerang",
+      "provinsi": "Banten",
+      "lat": -6.178,
+      "lon": 106.632
+    },
+    {
+      "id": "jakarta",
+      "nama": "Jakarta",
+      "provinsi": "DKI Jakarta",
+      "lat": -6.209,
+      "lon": 106.846
+    },
+    {
+      "id": "depok",
+      "nama": "Depok",
+      "provinsi": "Jawa Barat",
+      "lat": -6.403,
+      "lon": 106.794
+    },
+    {
+      "id": "bekasi",
+      "nama": "Bekasi",
+      "provinsi": "Jawa Barat",
+      "lat": -6.238,
+      "lon": 106.976
+    },
+    {
+      "id": "bogor",
+      "nama": "Bogor",
+      "provinsi": "Jawa Barat",
+      "lat": -6.597,
+      "lon": 106.806
+    },
+    {
+      "id": "sukabumi",
+      "nama": "Sukabumi",
+      "provinsi": "Jawa Barat",
+      "lat": -6.928,
+      "lon": 106.93
+    },
+    {
+      "id": "bandung",
+      "nama": "Bandung",
+      "provinsi": "Jawa Barat",
+      "lat": -6.917,
+      "lon": 107.619
+    }
   ],
   "intervalMenit": 10,
   "port": 8080,
   "sumberX": {
     "aktif": true,
-    "akunResmi": ["infoBMKG", "BNPB_Indonesia", "PVMBG_", "id_magma"],
-    "kataKunci": ["anak krakatau", "abu vulkanik", "erupsi krakatau"],
+    "akunResmi": [
+      "infoBMKG",
+      "BNPB_Indonesia",
+      "PVMBG_",
+      "id_magma"
+    ],
+    "kataKunci": [
+      "anak krakatau",
+      "abu vulkanik",
+      "erupsi krakatau"
+    ],
     "nitterInstances": [
       "https://xcancel.com",
       "https://nitter.tiekoetter.com",
       "https://nitter.space"
-    ]
+    ],
+    "postPilihan": [
+      "https://x.com/infoBMKG/status/2096418871880339807",
+      "https://x.com/infoBMKG/status/2096418877047451744"
+    ],
+    "_postPilihan": "Tautan posting X yang selalu ditampilkan, diambil isinya lewat FxTwitter tanpa kunci. Berguna saat penemuan otomatis (x-resmi / x-nitter) sedang mati. Dua contoh di bawah adalah pengumuman resmi BMKG untuk erupsi September 2026 — kosongkan daftarnya kalau sudah tidak relevan."
   }
 }

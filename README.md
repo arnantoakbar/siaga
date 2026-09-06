@@ -45,6 +45,12 @@ diwarnai menurut status, cincin putus-putus adalah jarak dari kawah.
 |---|---|
 | ![Kabar](docs/09-kabar-desktop.png) | ![Sumber](docs/10-sumber-desktop.png) |
 
+**Lokasi perangkat & lapisan Windy**
+
+| Deteksi lokasi | Peta Windy |
+|---|---|
+| ![Lokasi](docs/11-lokasi-mobile.png) | ![Windy](docs/12-windy-desktop.png) |
+
 Mode terang mengikuti pengaturan sistem pembaca:
 
 ![Terang](docs/04-vonis-terang.png)
@@ -64,9 +70,11 @@ Semua ditarik di sisi server tiap 10 menit. Tidak ada satu pun yang butuh kunci 
 | **Open-Meteo Air Quality (CAMS)** | PM2.5 / PM10 / SO₂ per kota → ISPU | JSON publik | ✅ jalan |
 | **Open-Meteo Forecast** | Angin pada 850/700/500/250 hPa di atas kawah | JSON publik | ✅ jalan |
 | **Google News RSS (id)** | Kabar terbaru dari puluhan media | RSS | ✅ jalan |
-| **X** — endpoint sematan `syndication.twitter.com` | Linimasa @infoBMKG, @BNPB_Indonesia, dll. | Baca `__NEXT_DATA__` | ⚠️ tergantung reputasi IP |
-| **X** — pencarian kata kunci lewat Nitter | Unggahan warga | RSS instans Nitter | ⚠️ perlu whitelist, lihat di bawah |
-| **Threads** | Unggahan warga | Threads Graph API | ❌ perlu App Review Meta, lihat di bawah |
+| **X** — endpoint sematan `syndication.twitter.com` | **Menemukan** unggahan akun resmi (@infoBMKG, @BNPB_Indonesia, …) | Baca `__NEXT_DATA__` | ⚠️ tergantung reputasi IP |
+| **X** — pencarian kata kunci lewat Nitter | **Menemukan** unggahan warga | RSS instans Nitter | ⚠️ perlu whitelist, lihat di bawah |
+| **X** — [FxTwitter](https://github.com/FixTweet/FxTwitter) | **Melengkapi** tiap unggahan: teks penuh, foto, video, metrik | `api.fxtwitter.com` | ✅ jalan, tanpa kunci |
+| **Threads** | Unggahan warga | Threads Graph API | ❌ perlu App Review Meta — [panduan token](docs/threads.md) |
+| **Windy** (opsional, atas persetujuan pembaca) | Lapisan angin / PM2.5 / aerosol di peta | iframe `embed.windy.com` | ✅ jalan |
 
 Yang gagal **tidak disembunyikan**. Bagian "Dari mana datanya" di halaman menampilkan
 status tiap sumber berikut pesan errornya, supaya pembaca tidak menganggap halaman
@@ -88,17 +96,41 @@ pengukur di darat.** Jakarta dan Bogor sering jatuh di sel model yang sama dan m
 angka identik. Ini ditulis apa adanya di halaman. Angka resmi ada di stasiun pemantau
 KLHK dan BMKG.
 
-**X:** endpoint sematan bekerja tanpa kunci tapi sensitif terhadap reputasi IP — dari IP
-pusat data ia sering membalas 429, dari sambungan rumahan biasanya lolos. Untuk pencarian
-kata kunci, instans Nitter (mis. `xcancel.com`) mengharuskan pembaca RSS di-whitelist:
-panggil sekali, ambil ID dari pesan errornya di panel "Dari mana datanya", lalu kirim
-surel ke alamat yang mereka sebutkan. Daftar instans ada di `config/config.json`.
+**X terbagi dua peran, dan itu penting untuk dipahami:**
+
+*Menemukan* unggahan dan *membaca isinya* adalah dua masalah terpisah. FxTwitter
+menyelesaikan yang kedua dengan sangat baik dan gratis, tapi tidak bisa menyelesaikan
+yang pertama sama sekali — `/latest`, `/timeline`, dan `/search` semuanya membalas 404.
+Jadi ia dipakai sebagai **pelengkap**, bukan penemu.
+
+| Peran | Dikerjakan oleh | Keandalan |
+|---|---|---|
+| Menemukan unggahan akun resmi | endpoint sematan X | tergantung reputasi IP — sering 429 dari IP pusat data, biasanya lolos dari sambungan rumahan |
+| Menemukan unggahan warga | instans Nitter | perlu pembaca RSS di-whitelist |
+| Membaca isi unggahan | **FxTwitter** | stabil, tanpa kunci |
+
+Setiap tautan X yang ditemukan dilewatkan ke FxTwitter, sehingga yang tampil di halaman
+bukan cuplikan HTML melainkan teks penuh, foto atau video, dan jumlah suka/ulang.
+
+**Kalau penemuan sedang mati sama sekali**, isi `sumberX.postPilihan` di
+`config/config.json` dengan tautan unggahan X yang penting — FxTwitter tetap bisa
+menariknya. Bawaan repo ini sudah memuat dua pengumuman resmi BMKG untuk erupsi
+September 2026 sebagai contoh.
+
+**Saringan relevansi.** Linimasa @infoBMKG berisi laporan gempa otomatis setiap beberapa
+menit dari seluruh Indonesia. Tanpa saringan, halaman erupsi Krakatau penuh gempa
+magnitudo 2 di Flores. Unggahan media sosial karena itu hanya lolos kalau menyebut
+gunung yang dipantau atau kata kunci di `sumberX.kataKunci`. Berita tidak disaring ulang
+karena sudah tersaring di kueri pencariannya.
+
+**Nitter:** instans seperti `xcancel.com` mengharuskan pembaca RSS di-whitelist. Panggil
+sekali, ambil ID dari pesan errornya di panel "Dari mana datanya", lalu kirim surel ke
+alamat yang mereka sebutkan. Daftar instans ada di `config/config.json`.
 
 **Threads:** Meta punya endpoint `keyword_search`, tapi **tanpa persetujuan App Review
 untuk izin `threads_keyword_search`, endpoint itu hanya mengembalikan unggahan milik
-pemilik token** — bukan unggahan publik. Jadi tanpa App Review kanal ini tidak berguna
-untuk memantau perbincangan warga. Kodenya sudah ada dan tinggal diisi `THREADS_TOKEN`
-kalau kamu sudah lolos review.
+pemilik token** — bukan unggahan publik. Punya akun Threads saja tidak cukup.
+Langkah lengkap mendapatkan tokennya ada di **[docs/threads.md](docs/threads.md)**.
 
 ---
 
@@ -153,6 +185,54 @@ kelihatan meyakinkan.
 
 ---
 
+## Lokasi perangkat
+
+Tombol **"Pakai lokasi saya"** memakai geolocation peramban untuk mengganti pilihan kota
+dengan titik pengguna sendiri, lalu menghitung ulang jarak, arah, ISPU, jalur abu, dan
+seluruh daftar tindakan untuk titik itu.
+
+Yang dilakukan supaya ini tidak jadi kebocoran data:
+
+- **Izin tidak pernah diminta saat halaman dibuka.** Pengguna yang menekan tombolnya.
+- **Koordinat dibulatkan ke 2 desimal (~1,1 km)** di peramban sebelum dikirim, dan
+  dibulatkan lagi di server. Sel model kualitas udara lebarnya sekitar 40 km, jadi
+  ketelitian lebih dari itu tidak menambah apa pun selain risiko.
+- **Dikirim lewat badan POST, bukan query string**, supaya tidak mendarat di access log,
+  riwayat peramban, atau header `Referer`.
+- **Tidak disimpan di mana pun** — tidak ke SQLite, tidak ke log. Yang ada hanya singgahan
+  di memori selama 10 menit, berkunci koordinat yang sudah dibulatkan, semata supaya
+  Open-Meteo tidak ditanya berulang.
+- Izin ditolak, perangkat tidak bisa menentukan posisi, atau permintaan kehabisan waktu
+  ditangani masing-masing dengan pesan yang menyebutkan apa yang terjadi, lalu halaman
+  kembali ke pemilih kota.
+
+Halaman tetap berfungsi penuh tanpa izin lokasi. Fiturnya percepatan, bukan syarat.
+
+---
+
+## Lapisan Windy
+
+Toggle **"Peta Windy"** menampilkan `embed.windy.com` sebagai pembanding dari model
+ECMWF dan CAMS, dengan empat lapisan yang **sudah diuji satu per satu**:
+
+| Lapisan | Kunci overlay | Yang ditampilkan |
+|---|---|---|
+| Angin | `wind` | arah & kecepatan udara, bisa dipilih ketinggiannya: permukaan, ~1,5 / 3 / 5,5 / 10,5 km — sama dengan lapisan di kompas angin |
+| PM2.5 | `pm2p5` | partikel halus, µg/m³ |
+| Aerosol | `aod550` | ketebalan optik aerosol — yang paling dekat dengan sebaran abu |
+| Debu | `dustsm` | debu permukaan, µg/m³ |
+
+`so2` sengaja tidak dipakai: embed Windy menerimanya tanpa error tapi diam-diam kembali
+menggambar lapisan angin, jadi pembaca akan melihat data yang bukan yang diminta.
+
+**Tidak aktif sejak awal, dan meminta persetujuan sekali.** Membuka lapisan ini berarti
+peramban pembaca menghubungi windy.com dan alamat IP-nya terlihat oleh mereka. Peta
+bawaan Siaga digambar sendiri dan tidak memanggil siapa pun, jadi ia tetap yang utama —
+lebih ringan, tetap jalan tanpa internet ke pihak ketiga, dan menampilkan status kota
+yang tidak dimiliki Windy. Saat toggle dimatikan, iframe-nya dibuang, bukan disembunyikan.
+
+---
+
 ## Arsitektur
 
 ```
@@ -166,7 +246,7 @@ src/
     magma.js           PVMBG — tingkat aktivitas, laporan 6 jam, laporan harian
     bmkg.js            gempa tektonik
     cuaca.js           Open-Meteo — kualitas udara & angin per lapisan
-    publik.js          Google News RSS, X (3 jalur), Threads
+    publik.js          Google News RSS, X (temu lewat sematan/Nitter, lengkapi lewat FxTwitter), Threads
 config/
   config.json          gunung yang dipantau, daftar kota, interval, sumber X
   ambang.json          titik patah ISPU, level PVMBG, teks tindakan — semua bersitasi
@@ -179,6 +259,7 @@ test.js                25 pemeriksaan mandiri, tanpa framework
 scripts/
   tangkap.mjs          tangkapan layar README lewat CDP (alat pengembangan)
   garis-pantai.mjs     buat ulang coastline.json dari Natural Earth (sekali jalan)
+docs/threads.md        cara mendapatkan token Threads, berikut batasannya
 ```
 
 **Nol dependensi npm.** Node 25 sudah membawa `fetch`, `node:sqlite`, `node:http`, dan
@@ -298,6 +379,7 @@ memasang cookie. Satu-satunya yang disimpan di peramban adalah kota pilihan tera
 |---|---|
 | `GET /api/terkini` | Seluruh potret: status, kota, angin, kabar, kesehatan sumber |
 | `GET /api/kesehatan` | Ringkas untuk pemantauan. Balas 503 kalau potret lebih tua dari 3× interval |
+| `POST /api/lokasi` | Analisa untuk satu titik. Badan `{"lat":-6.92,"lon":107.62}`. Tidak menyimpan apa pun |
 | `POST /api/segarkan` | Paksa pengumpulan ulang sekarang |
 
 `/api/kesehatan` cocok dipakai Uptime Kuma atau healthcheck Docker.
@@ -324,6 +406,19 @@ Kalau kota berada di luar kotak peta, geser `PETA` di `public/app.js` dan buat u
 Ubah `gunung` di `config/config.json` — `nama` harus persis seperti tertulis di tabel
 tingkat aktivitas MAGMA (mis. `"Semeru"`, `"Merapi"`, `"Ibu"`). Sisanya jalan sendiri:
 level, laporan, rekomendasi, angin, kualitas udara.
+
+### Menempel unggahan X secara manual
+
+Kalau penemuan otomatis sedang mati, isi `sumberX.postPilihan` di `config/config.json`:
+
+```json
+"postPilihan": [
+  "https://x.com/infoBMKG/status/2096418871880339807"
+]
+```
+
+FxTwitter yang mengambil isinya — tanpa kunci, tanpa akun. Kosongkan daftarnya kalau
+unggahannya sudah tidak relevan.
 
 ### Mengubah ambang
 
@@ -377,8 +472,12 @@ ulang. Orang memeriksa status gunung jam dua pagi.
 - **Kualitas udara adalah keluaran model, bukan pengukuran darat.** Lihat catatan di atas.
 - **Sebaran abu adalah perkiraan arah**, bukan prakiraan resmi. Prakiraan resmi ada di VONA
   PVMBG dan Darwin VAAC. VONA belum ditarik karena tabelnya digambar JavaScript.
-- **Kanal media sosial rapuh.** X tergantung reputasi IP, Threads terkunci App Review Meta.
+- **Penemuan unggahan media sosial rapuh, pembacaannya tidak.** FxTwitter stabil untuk
+  membaca isi unggahan, tapi menemukan unggahan baru tergantung endpoint sematan X
+  (sensitif reputasi IP) atau Nitter (perlu whitelist). Threads terkunci App Review Meta.
   Google News RSS yang paling andal saat ini dan itulah yang mengisi kanal perbincangan.
+- **Gambar unggahan X dimuat dari CDN Twitter**, jadi peramban pembaca menghubungi
+  `pbs.twimg.com`. Dikirim dengan `referrerpolicy="no-referrer"`.
 - **Tidak ada notifikasi.** Halaman ini harus dibuka. Push, SMS, dan siaran WhatsApp adalah
   langkah berikutnya, dan itu yang paling menolong orang yang tidak punya media sosial.
 

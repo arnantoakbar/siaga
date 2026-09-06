@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { jarakKm, arahDerajat, bedaSudut, mataAngin, keTeks } from './src/util.js';
 import { hitungIspu, ispuGabungan, radiusResmiKm, jalurAbu, analisaKota } from './src/analisa.js';
 import { keWaktuISO, bagian } from './src/sumber/magma.js';
+import { relevan } from './src/kumpul.js';
 
 const ambang = JSON.parse(readFileSync(new URL('./config/ambang.json', import.meta.url)));
 const tp = ambang.ispuTitikPatah;
@@ -117,6 +118,22 @@ uji('tiap bagian berhenti di label berikutnya', () => {
   const sec = bagian(['Pengamatan Visual', 'kabut tebal', 'Pengamatan Kegempaan', '2 kali gempa Hembusan']);
   assert.deepEqual(sec['Pengamatan Visual'], ['kabut tebal']);
   assert.deepEqual(sec['Pengamatan Kegempaan'], ['2 kali gempa Hembusan']);
+});
+
+console.log('\nSaringan relevansi media sosial');
+const KUNCI = ['anak krakatau', 'krakatau', 'abu vulkanik', 'erupsi', 'gunung api', 'vulkanik'];
+uji('laporan gempa rutin BMKG tidak lolos', () => {
+  assert.equal(
+    relevan({ kanal: 'x', judul: '#Gempa Mag:2.1, 06-Sep-2026 08:53:26WIB, Lok:8.70LS, 119.78BT' }, KUNCI),
+    false
+  );
+});
+uji('pengumuman soal gunungnya lolos', () => {
+  assert.ok(relevan({ kanal: 'x', judul: '🚨 UPDATE KONDISI TERKINI GUNUNG ANAK KRAKATAU 🚨' }, KUNCI));
+  assert.ok(relevan({ kanal: 'x', judul: 'Sebaran abu vulkanik meluas hingga Jakarta' }, KUNCI));
+});
+uji('berita tidak disaring ulang — sudah tersaring di kueri sumbernya', () => {
+  assert.ok(relevan({ kanal: 'berita', judul: 'apa pun' }, KUNCI));
 });
 
 console.log('\nAnalisa kota — ujung ke ujung');

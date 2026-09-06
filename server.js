@@ -6,7 +6,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { bukaDb, bacaPotret } from './src/db.js';
-import { kumpulkan, CONFIG } from './src/kumpul.js';
+import { kumpulkan, analisaTitik, CONFIG } from './src/kumpul.js';
 
 const AKAR = fileURLToPath(new URL('.', import.meta.url));
 const PUBLIK = join(AKAR, 'public');
@@ -28,6 +28,9 @@ const MIME = {
 const db = bukaDb(join(DATA, 'siaga.db'));
 let potret = bacaPotret(DATA);
 let sedangKumpul = false;
+// Hasil per titik yang dibulatkan, ditahan 10 menit supaya Open-Meteo tidak
+// ditanya berulang untuk koordinat yang sama. Hanya di memori.
+const cacheLokasi = new Map();
 
 async function segarkan() {
   if (sedangKumpul) return;
@@ -79,6 +82,41 @@ const srv = createServer(async (req, res) => {
     );
     const sehat = potret && Date.now() - Date.parse(potret.dibuat) < INTERVAL_MS * 3;
     return kirim(res, sehat ? 200 : 503, MIME['.json'], badan);
+  }
+
+  // Lokasi perangkat. Sengaja POST, bukan query string: koordinat tidak boleh
+  // mendarat di access log, riwayat peramban, atau header Referer.
+  // Hasilnya tidak disimpan di mana pun.
+  if (url.pathname === '/api/lokasi' && req.method === 'POST') {
+    let badan = '';
+    for await (const potong of req) {
+      badan += potong;
+      if (badan.length > 2000) { req.destroy(); return; }
+    }
+    let lat, lon;
+    try {
+      ({ lat, lon } = JSON.parse(badan));
+    } catch {
+      return kirim(res, 400, MIME['.json'], Buffer.from('{"galat":"badan bukan JSON"}'));
+    }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180)
+      return kirim(res, 400, MIME['.json'], Buffer.from('{"galat":"koordinat di luar jangkauan"}'));
+    if (!potret)
+      return kirim(res, 503, MIME['.json'], Buffer.from('{"galat":"data belum tersedia"}'));
+
+    const kunci = `${Math.round(lat * 100)},${Math.round(lon * 100)}`;
+    const singgah = cacheLokasi.get(kunci);
+    if (singgah && Date.now() - singgah.pada < 10 * 60_000)
+      return kirim(res, 200, MIME['.json'], Buffer.from(JSON.stringify(singgah.data)), { 'Cache-Control': 'no-store' });
+
+    try {
+      const data = await analisaTitik(lat, lon, potret);
+      if (cacheLokasi.size > 500) cacheLokasi.clear();
+      cacheLokasi.set(kunci, { pada: Date.now(), data });
+      return kirim(res, 200, MIME['.json'], Buffer.from(JSON.stringify(data)), { 'Cache-Control': 'no-store' });
+    } catch (e) {
+      return kirim(res, 502, MIME['.json'], Buffer.from(JSON.stringify({ galat: String(e.message).slice(0, 200) })));
+    }
   }
 
   if (url.pathname === '/api/segarkan' && req.method === 'POST') {

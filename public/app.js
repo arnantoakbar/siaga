@@ -28,6 +28,10 @@ const lebarWadah = (sel, cadangan = 360) => {
 const ikon = (nama, kelas) =>
   `<svg viewBox="0 0 24 24" ${kelas ? `class="${kelas}"` : ''} aria-hidden="true"><use href="#i-${String(nama).replace(/^i-/, '')}"/></svg>`;
 const aman = (s) => String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+// PVMBG menulis "Masyarakat/pengunjung/wisatawan/pendaki" sebagai satu kata panjang.
+// Peramban tidak memutus baris setelah garis miring, jadi disisipkan titik putus
+// tak terlihat — teksnya sendiri tidak diubah, hanya boleh berganti baris di sana.
+const bolehPutus = (s) => aman(s).replace(/\//g, '/\u200B');
 
 // ── waktu ─────────────────────────────────────────────────────────────────
 const WIB = { timeZone: 'Asia/Jakarta' };
@@ -63,6 +67,11 @@ let kotaTerpilih = localStorage.getItem('siaga.kota') || null;
 let lapisanAktif = new Set();
 let tabKabar = 'resmi';
 let garisPantai = null;
+let lokasiSaya = null;                 // hasil analisa untuk koordinat perangkat
+let petaWindy = false;
+let windySetuju = localStorage.getItem('siaga.windy') === 'ya';
+let windyOverlay = 'wind';
+let windyLevel = '700h';
 
 // ── kepala ────────────────────────────────────────────────────────────────
 function gambarSegar() {
@@ -115,15 +124,23 @@ function gambarVonis() {
 function gambarPilihKota() {
   const sel = $('#pilih-kota');
   sel.innerHTML = '';
+  if (lokasiSaya) {
+    const o = html('option');
+    o.value = 'lokasi-saya';
+    o.textContent = `Lokasi kamu — ${lokasiSaya.jarakKm} km`;
+    sel.append(o);
+  }
   for (const k of D.kota) {
     const o = html('option');
     o.value = k.kotaId;
     o.textContent = `${k.nama} — ${k.jarakKm} km`;
     sel.append(o);
   }
-  if (!D.kota.some((k) => k.kotaId === kotaTerpilih)) kotaTerpilih = D.kota[0]?.kotaId;
+  if (kotaTerpilih !== 'lokasi-saya' && !D.kota.some((k) => k.kotaId === kotaTerpilih))
+    kotaTerpilih = D.kota[0]?.kotaId;
   sel.value = kotaTerpilih;
   sel.onchange = () => {
+    if (sel.value !== 'lokasi-saya' && lokasiSaya) lepasLokasi();
     kotaTerpilih = sel.value;
     localStorage.setItem('siaga.kota', kotaTerpilih);
     gambarKota();
@@ -132,7 +149,8 @@ function gambarPilihKota() {
   };
 }
 
-const kotaKini = () => D.kota.find((k) => k.kotaId === kotaTerpilih) || D.kota[0];
+const kotaKini = () =>
+  (kotaTerpilih === 'lokasi-saya' && lokasiSaya) || D.kota.find((k) => k.kotaId === kotaTerpilih) || D.kota[0];
 
 function gambarKota() {
   const k = kotaKini();
@@ -143,17 +161,17 @@ function gambarKota() {
     ? k.langkah
         .map(
           (t) => `<li>
-            <div class="langkah-atas">${ikon('i-awas')}<p>${aman(t.teks)}</p></div>
+            <div class="langkah-atas">${ikon('awas')}<p>${bolehPutus(t.teks)}</p></div>
             <details><summary>Kenapa ini muncul</summary><p>${aman(t.dasar)} · Sumber: ${aman(t.sumber)}</p></details>
           </li>`
         )
         .join('')
-    : `<li><div class="langkah-atas">${ikon('i-cek')}<p>Tidak ada tindakan khusus untuk ${aman(k.nama)} saat ini. Tetap ikuti kabar resmi.</p></div></li>`;
+    : `<li><div class="langkah-atas">${ikon('cek')}<p>Tidak ada tindakan khusus untuk ${aman(k.nama)} saat ini. Tetap ikuti kabar resmi.</p></div></li>`;
 
   $('#kartu-kota').innerHTML = `
     <div class="kartu-kota">
       <div class="kota-kepala">
-        <div><h3>${aman(k.nama)}</h3><p>${aman(k.provinsi)}</p></div>
+        <div><h3>${aman(k.nama)}</h3><p>${k.dariPerangkat ? 'Dari lokasi perangkat kamu' : aman(k.provinsi)}</p></div>
         ${lencana(k.status)}
       </div>
       <dl class="ukur">
@@ -164,12 +182,90 @@ function gambarKota() {
       </dl>
       ${
         k.alasan.length
-          ? `<p class="cap" style="margin-top:16px">${ikon('i-info')}<span>${k.alasan.map((a) => aman(a.teks)).join(' ')}</span></p>`
+          ? `<p class="cap" style="margin-top:16px">${ikon('info')}<span>${k.alasan.map((a) => bolehPutus(a.teks)).join(' ')}</span></p>`
           : ''
       }
       <h3 style="font-size:17px;margin-top:24px">Yang perlu kamu lakukan</h3>
       <ol class="langkah">${langkah}</ol>
     </div>`;
+}
+
+const kakiPeta = () =>
+  D.angin
+    ? `Juring menunjukkan sejauh mana abu terbawa dalam 6 jam pada kecepatan angin saat ini, melebar ${D.ambang.sektorToleransiDerajat}° ke kiri dan kanan. Angin diambil ${lalu(D.angin.waktuData)}.`
+    : 'Data angin tidak tersedia, jadi arah sebaran tidak bisa digambar.';
+
+// ── lokasi perangkat ──────────────────────────────────────────────────────
+// Izin tidak pernah diminta saat halaman dibuka — pengguna yang menekan tombol.
+// Koordinat dibulatkan ke 2 desimal (~1,1 km) sebelum dikirim, lewat badan POST,
+// dan tidak disimpan di mana pun. Ketelitian itu sudah jauh melebihi kebutuhan:
+// sel model kualitas udara lebarnya sekitar 40 km.
+function kabarLokasi(teks, nada, aksi) {
+  const el = $('#lokasi-kabar');
+  el.hidden = !teks;
+  el.dataset.nada = nada || '';
+  if (!teks) return;
+  el.innerHTML = `${ikon(nada === 'galat' ? 'awas' : 'pin')}<span>${aman(teks)}</span>`;
+  if (aksi) {
+    const b = html('button', { type: 'button' }, aksi.label);
+    b.onclick = aksi.fn;
+    el.querySelector('span').append(b);
+  }
+}
+
+async function pakaiLokasi() {
+  const tombol = $('#tombol-lokasi');
+  if (!navigator.geolocation)
+    return kabarLokasi('Peramban ini tidak mendukung deteksi lokasi. Pilih kota terdekat secara manual.', 'galat');
+
+  tombol.dataset.keadaan = 'memuat';
+  kabarLokasi('Meminta izin lokasi…');
+  try {
+    const pos = await new Promise((ok, gagal) =>
+      navigator.geolocation.getCurrentPosition(ok, gagal, { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 })
+    );
+    const bulat = (n) => Math.round(n * 100) / 100;
+    const r = await fetch('/api/lokasi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: bulat(pos.coords.latitude), lon: bulat(pos.coords.longitude) }),
+    });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).galat || `server membalas ${r.status}`);
+
+    lokasiSaya = await r.json();
+    kotaTerpilih = 'lokasi-saya';
+    localStorage.setItem('siaga.kota', 'lokasi-saya');
+    tombol.dataset.keadaan = 'aktif';
+    gambarPilihKota();
+    gambarKota();
+    gambarPeta();
+    gambarUdara();
+    kabarLokasi(
+      `Memakai lokasi perangkat, dibulatkan ke sekitar 1 km. Koordinat tidak disimpan.`,
+      '',
+      { label: 'Kembali ke daftar kota', fn: lepasLokasi }
+    );
+  } catch (e) {
+    tombol.dataset.keadaan = '';
+    const pesan =
+      e.code === 1 ? 'Izin lokasi ditolak. Pilih kota terdekat secara manual.'
+      : e.code === 2 ? 'Lokasi tidak bisa ditentukan perangkat. Pilih kota terdekat secara manual.'
+      : e.code === 3 ? 'Permintaan lokasi kehabisan waktu. Coba lagi atau pilih kota manual.'
+      : `Gagal memakai lokasi: ${e.message}`;
+    kabarLokasi(pesan, 'galat');
+  }
+}
+
+function lepasLokasi() {
+  lokasiSaya = null;
+  kotaTerpilih = D.kota[0]?.kotaId;
+  localStorage.setItem('siaga.kota', kotaTerpilih);
+  $('#tombol-lokasi').dataset.keadaan = '';
+  kabarLokasi(null);
+  gambarPilihKota();
+  gambarKota();
+  gambarPeta();
+  gambarUdara();
 }
 
 // ── peta ──────────────────────────────────────────────────────────────────
@@ -224,6 +320,7 @@ const RONA = { 850: '#F6C98A', 700: '#F0A053', 500: '#E4700C', 250: '#B01D14' };
 const warnaRona = (hPa) => RONA[hPa] || '#E4700C';
 
 function gambarPeta() {
+  if (petaWindy) return;
   const p = proyeksi();
   // Peta wajib memakai satuan geografis, jadi ukuran teks dikoreksi balik
   // dengan rasio viewBox : lebar tampil supaya tetap terbaca ~12 px di layar.
@@ -298,6 +395,7 @@ function gambarPeta() {
     return s.indexOf(a.status) - s.indexOf(b.status) || a.jarakKm - b.jarakKm;
   });
 
+  if (lokasiSaya) urutLabel.unshift(lokasiSaya);
   for (const k of urutLabel) {
     const [x, y] = p.xy(k.lon, k.lat);
     const dipilih = k.kotaId === kotaTerpilih;
@@ -351,14 +449,115 @@ function gambarPeta() {
   $('#peta-keterangan').innerHTML = Object.entries(LABEL_STATUS)
     .map(([s, l]) => `<span><i style="background:${warnaStatus(s)}"></i>${l}</span>`)
     .join('');
-  $('#peta-kaki').textContent = D.angin
-    ? `Juring menunjukkan sejauh mana abu terbawa dalam 6 jam pada kecepatan angin saat ini, melebar ${D.ambang.sektorToleransiDerajat}° ke kiri dan kanan. Angin diambil ${lalu(D.angin.waktuData)}.`
-    : 'Data angin tidak tersedia, jadi arah sebaran tidak bisa digambar.';
+  $('#peta-kaki').textContent = kakiPeta();
 
   // padanan tabel — identitas tidak pernah lewat warna saja
   $('#tabel-kota').innerHTML = `<table class="data"><thead><tr><th>Kota</th><th>Jarak</th><th>Arah</th><th>ISPU</th><th>Status</th></tr></thead><tbody>
     ${D.kota.map((k) => `<tr><td>${aman(k.nama)}</td><td>${k.jarakKm} km</td><td>${aman(k.arahMata)}</td><td>${k.ispu?.nilai ?? '—'}</td><td>${LABEL_STATUS[k.status]}</td></tr>`).join('')}
   </tbody></table>`;
+}
+
+// ── peta Windy ────────────────────────────────────────────────────────────
+// Lapisan pihak ketiga, sengaja tidak aktif sejak awal: membukanya berarti
+// peramban pembaca menghubungi windy.com. Itu diberitahukan lebih dulu dan
+// pilihannya diingat. Peta bawaan tetap yang utama karena ringan dan tidak
+// memanggil siapa pun.
+//
+// Kunci overlay di bawah sudah diuji satu per satu pada embed Windy —
+// `so2` tidak dipakai karena diam-diam jatuh kembali ke lapisan angin.
+const WINDY_OVERLAY = [
+  { kunci: 'wind',   nama: 'Angin',        satuan: 'arah & kecepatan udara' },
+  { kunci: 'pm2p5',  nama: 'PM2.5',        satuan: 'partikel halus, µg/m³' },
+  { kunci: 'aod550', nama: 'Aerosol',      satuan: 'ketebalan optik aerosol — paling dekat dengan abu' },
+  { kunci: 'dustsm', nama: 'Debu',         satuan: 'debu permukaan, µg/m³' },
+];
+const WINDY_LEVEL = [
+  { kunci: 'surface', nama: 'Permukaan' },
+  { kunci: '850h',    nama: '~1,5 km' },
+  { kunci: '700h',    nama: '~3 km' },
+  { kunci: '500h',    nama: '~5,5 km' },
+  { kunci: '250h',    nama: '~10,5 km' },
+];
+
+function urlWindy() {
+  const g = D.gunung;
+  const q = new URLSearchParams({
+    lat: g.lat, lon: g.lon, zoom: '7',
+    overlay: windyOverlay,
+    product: windyOverlay === 'wind' ? 'ecmwf' : 'cams',
+    level: windyOverlay === 'wind' ? windyLevel : 'surface',
+    marker: 'true', menu: '', message: '', calendar: 'now', type: 'map',
+    location: 'coordinates', metricWind: 'km/h', metricTemp: '°C',
+  });
+  return `https://embed.windy.com/embed2.html?${q}`;
+}
+
+function gambarWindy() {
+  const wadah = $('#windy-wadah');
+  const saring = $('#saring-windy');
+
+  if (!windySetuju) {
+    saring.hidden = true;
+    wadah.innerHTML = '';
+    wadah.append(
+      html('div', { class: 'windy-catatan' },
+        `${ikon('awas')}<div><b>Lapisan ini dimuat dari windy.com.</b> Kalau kamu membukanya, peramban kamu
+         menghubungi server mereka dan mereka bisa melihat alamat IP kamu. Peta bawaan Siaga tidak memanggil
+         siapa pun. Data Windy berasal dari model ECMWF dan CAMS — perkiraan, bukan pengamatan resmi PVMBG.
+         <br><button type="button" id="windy-setuju">Muat peta Windy</button></div>`)
+    );
+    $('#windy-setuju').onclick = () => {
+      windySetuju = true;
+      localStorage.setItem('siaga.windy', 'ya');
+      gambarWindy();
+    };
+    return;
+  }
+
+  // penyaring overlay + ketinggian
+  saring.hidden = false;
+  saring.innerHTML = '';
+  for (const o of WINDY_OVERLAY) {
+    const b = html('button', { class: 'cip', type: 'button', 'aria-pressed': windyOverlay === o.kunci, title: o.satuan });
+    b.textContent = o.nama;
+    b.onclick = () => { windyOverlay = o.kunci; gambarWindy(); };
+    saring.append(b);
+  }
+  if (windyOverlay === 'wind')
+    for (const l of WINDY_LEVEL) {
+      const b = html('button', { class: 'cip', type: 'button', 'aria-pressed': windyLevel === l.kunci });
+      b.textContent = l.nama;
+      b.onclick = () => { windyLevel = l.kunci; gambarWindy(); };
+      saring.append(b);
+    }
+
+  const bingkai = html('iframe', {
+    src: urlWindy(),
+    title: 'Peta Windy',
+    loading: 'lazy',
+    referrerpolicy: 'no-referrer',
+    sandbox: 'allow-scripts allow-same-origin allow-popups',
+  });
+  wadah.replaceChildren(bingkai);
+}
+
+function alihPeta(keWindy) {
+  petaWindy = keWindy;
+  $('#alih-siaga').setAttribute('aria-pressed', !keWindy);
+  $('#alih-windy').setAttribute('aria-pressed', keWindy);
+  $('#peta-wadah').hidden = keWindy;
+  $('#peta-keterangan').hidden = keWindy;
+  $('#saring-lapisan').hidden = keWindy;
+  $('#saring-windy').hidden = !keWindy || !windySetuju;
+  $('#windy-wadah').hidden = !keWindy;
+  if (keWindy) gambarWindy();
+  else {
+    $('#windy-wadah').innerHTML = ''; // hentikan iframe saat tidak dipakai
+    gambarPeta();
+  }
+  $('#peta-kaki').textContent = keWindy
+    ? `Sumber: windy.com (model ECMWF & CAMS). Lapisan ini perkiraan pihak ketiga, bukan prakiraan sebaran abu resmi. Prakiraan resmi ada di VONA PVMBG dan Darwin VAAC.`
+    : kakiPeta();
 }
 
 // ── kompas angin ──────────────────────────────────────────────────────────
@@ -550,12 +749,29 @@ function gambarKabar() {
     (daftar.length
       ? `<ul class="kabar">${daftar
           .slice(0, 18)
-          .map(
-            (p) => `<li>
-              <div class="kabar-meta"><span class="asal">${aman(p.sumber || p.kanal)}</span><span>·</span><span title="${aman(jamWib(p.waktu))}">${lalu(p.waktu)}</span></div>
+          .map((p) => {
+            const angka = (n) => (n == null ? null : n >= 1000 ? `${(n / 1000).toFixed(1)} rb` : String(n));
+            const metrik = p.metrik
+              ? [angka(p.metrik.suka) && `${angka(p.metrik.suka)} suka`, angka(p.metrik.ulang) && `${angka(p.metrik.ulang)} ulang`]
+                  .filter(Boolean)
+              : [];
+            return `<li>
+              <div class="kabar-meta">
+                <span class="asal">${aman(p.penulis ? `${p.penulis} ${p.sumber}` : p.sumber || p.kanal)}</span>
+                <span>·</span><span title="${aman(jamWib(p.waktu))}">${lalu(p.waktu)}</span>
+              </div>
               <a href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow">${aman(p.judul)}</a>
-            </li>`
-          )
+              ${
+                p.gambar
+                  ? `<a class="kabar-media" href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow">
+                       <img src="${aman(p.gambar)}" alt="" loading="lazy" referrerpolicy="no-referrer">
+                       ${p.adaVideo ? `<span class="main">${ikon('main')}</span>` : ''}
+                     </a>`
+                  : ''
+              }
+              ${metrik.length ? `<div class="kabar-metrik">${metrik.map((m) => `<span>${aman(m)}</span>`).join('')}</div>` : ''}
+            </li>`;
+          })
           .join('')}</ul>`
       : `<p style="color:var(--ink-3)">Belum ada yang masuk di kanal ini.</p>`);
 }
@@ -571,6 +787,7 @@ const NAMA_SUMBER = {
   berita: 'Google News — Anak Krakatau',
   'berita-abu': 'Google News — abu vulkanik',
   'x-nitter': 'X lewat Nitter — pencarian kata kunci',
+  'x-fxtwitter': 'X lewat FxTwitter — melengkapi isi posting',
   'x-resmi': 'X — linimasa akun resmi',
   threads: 'Threads — pencarian kata kunci',
 };
@@ -607,6 +824,10 @@ async function muat() {
   gambarKabar();
   gambarSumber();
 }
+
+$('#tombol-lokasi').onclick = pakaiLokasi;
+$('#alih-siaga').onclick = () => alihPeta(false);
+$('#alih-windy').onclick = () => alihPeta(true);
 
 for (const id of ['tab-resmi', 'tab-publik'])
   $(`#${id}`).onclick = (e) => {

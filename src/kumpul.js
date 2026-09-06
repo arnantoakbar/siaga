@@ -30,6 +30,21 @@ async function coba(db, nama, fn) {
   }
 }
 
+/**
+ * Apakah sebuah posting benar-benar soal gunung yang dipantau?
+ *
+ * Linimasa akun resmi seperti @infoBMKG berisi laporan gempa otomatis setiap
+ * beberapa menit dari seluruh Indonesia. Tanpa saringan, halaman erupsi Krakatau
+ * penuh gempa magnitudo 2 di Flores dan yang penting jadi tenggelam.
+ * Berita sudah tersaring di sumbernya lewat kata kunci pencarian, jadi hanya
+ * kanal media sosial yang perlu diperiksa di sini.
+ */
+export function relevan(pos, kunci) {
+  if (pos.kanal === 'berita') return true;
+  const teks = `${pos.judul} ${pos.ringkas || ''}`.toLowerCase();
+  return kunci.some((k) => teks.includes(k));
+}
+
 /** Media sosial + berita. Tiap kanal berdiri sendiri; yang mati dilaporkan mati. */
 async function kanalPublik(db) {
   const g = CONFIG.gunung.nama;
@@ -59,11 +74,52 @@ async function kanalPublik(db) {
         },
   ]);
 
-  const pos = hasil
+  const kunciRelevan = [
+    g.toLowerCase(),
+    ...(CONFIG.sumberX.kataKunci || []).map((k) => k.toLowerCase()),
+    'krakatau', 'abu vulkanik', 'erupsi', 'gunung api', 'vulkanik',
+  ];
+
+  let pos = hasil
     .filter((h) => h.ok)
     .flatMap((h) => (Array.isArray(h.data) ? h.data : h.data?.item || []))
-    .filter((p) => p.waktu)
-    .sort((a, b) => b.waktu.localeCompare(a.waktu));
+    .filter((p) => p.waktu && relevan(p, kunciRelevan));
+
+  // FxTwitter melengkapi setiap tautan X yang sudah ditemukan: teks penuh,
+  // foto/video, dan metrik — hal yang tidak diberikan RSS Nitter maupun
+  // endpoint sematan. Ia tidak bisa MENEMUKAN posting (tak ada endpoint
+  // pencarian), jadi perannya murni memperkaya apa yang sudah ada,
+  // ditambah posting yang sengaja dipasang di config.
+  const tautanX = [
+    ...pos.filter((p) => p.kanal === 'x').map((p) => p.tautan),
+    ...(CONFIG.sumberX.postPilihan || []),
+  ];
+  const sFx = tautanX.length
+    ? await coba(db, 'x-fxtwitter', async () => {
+        const { hasil: kaya, galat } = await publik.xLengkapiBanyak(tautanX);
+        if (!kaya.length) throw new Error(galat.slice(0, 2).join(' | ') || 'tidak ada yang berhasil dilengkapi');
+        return { kaya, galat };
+      })
+    : {
+        nama: 'x-fxtwitter',
+        ok: false,
+        pesan:
+          'Tidak ada tautan X untuk dilengkapi. FxTwitter hanya bisa membaca posting yang tautannya sudah diketahui — ' +
+          'ia tidak punya endpoint pencarian, jadi penemuan harus datang dari x-resmi, x-nitter, atau sumberX.postPilihan di config.',
+        waktu: new Date().toISOString(),
+      };
+
+  if (sFx.ok) {
+    // yang sudah dilengkapi menggantikan versi mentahnya
+    const perTautan = new Map(sFx.data.kaya.map((k) => [k.tautan.replace(/^https?:\/\/(x|twitter)\.com/, ''), k]));
+    const kunci = (u) => String(u).replace(/^https?:\/\/(x|twitter)\.com/, '').split('?')[0];
+    pos = pos.filter((p) => p.kanal !== 'x' || !perTautan.has(kunci(p.tautan)));
+    // Diperiksa ulang setelah dilengkapi: teks penuh dari FxTwitter kadang
+    // mengungkap posting yang cuplikannya tadi tidak menyebut gunungnya.
+    pos.push(...sFx.data.kaya.filter((k) => relevan(k, kunciRelevan)));
+  }
+  hasil.push(sFx);
+  pos.sort((a, b) => b.waktu.localeCompare(a.waktu));
 
   // buang judul kembar antar media
   const unik = [];
@@ -164,3 +220,19 @@ export async function kumpulkan(db) {
 }
 
 export { ispuGabungan };
+
+/**
+ * Analisa untuk satu titik koordinat, dipakai endpoint lokasi perangkat.
+ *
+ * Koordinat sudah dibulatkan ke 2 desimal (sekitar 1,1 km) di peramban DAN di sini.
+ * Ketelitian itu lebih dari cukup untuk jarak ke kawah dan sel model kualitas udara
+ * yang lebarnya ~40 km, sekaligus menahan posisi persis pengguna agar tidak ikut
+ * terkirim. Tidak ada yang disimpan: tidak ke SQLite, tidak ke log.
+ */
+export async function analisaTitik(lat, lon, potret) {
+  const bulat = (n) => Math.round(n * 100) / 100;
+  const titik = { id: 'lokasi-saya', nama: 'Lokasi kamu', provinsi: 'dari perangkat', lat: bulat(lat), lon: bulat(lon) };
+  const udara = (await cuaca.kualitasUdara([titik]))[0];
+  const hasil = analisaKota(titik, CONFIG.gunung, potret?.laporan ?? null, udara, potret?.angin ?? null, AMBANG);
+  return { ...hasil, dariPerangkat: true };
+}

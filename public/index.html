@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#14110F" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="ikon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="gaya.css?v=5">
+<link rel="stylesheet" href="gaya.css?v=8">
 </head>
 <body>
 
@@ -36,6 +36,15 @@
   <g id="i-info" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="8.6"/><path d="M12 11.4v5"/><path d="M12 8.1h.01"/>
   </g>
+  <g id="i-pin" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 21.2s6.6-5.6 6.6-10.5a6.6 6.6 0 1 0-13.2 0C5.4 15.6 12 21.2 12 21.2Z"/><circle cx="12" cy="10.6" r="2.5"/>
+  </g>
+  <g id="i-lapis" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m12 3.4 8.6 4.4L12 12.2 3.4 7.8 12 3.4Z"/><path d="m3.4 12.2 8.6 4.4 8.6-4.4"/><path d="m3.4 16.6 8.6 4.4 8.6-4.4"/>
+  </g>
+  <g id="i-main" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.5 4.6 19 12 6.5 19.4V4.6Z"/>
+  </g>
   <g id="i-perisai" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 3.2 4.6 6v6.1c0 4.3 3 8 7.4 8.9 4.4-.9 7.4-4.6 7.4-8.9V6L12 3.2Z"/>
   </g>
@@ -61,7 +70,11 @@
     <div class="pilih-baris">
       <label class="hanya-pembaca-layar" for="pilih-kota">Pilih kota</label>
       <select class="pilih" id="pilih-kota"></select>
+      <button class="cip tombol-lokasi" id="tombol-lokasi" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pin"/></svg>Pakai lokasi saya
+      </button>
     </div>
+    <p class="cap lokasi-kabar" id="lokasi-kabar" hidden></p>
     <div id="kartu-kota"><div class="rangka" style="height:340px"></div></div>
   </section>
 
@@ -69,8 +82,18 @@
     <h2>Ke mana abunya pergi</h2>
     <p class="sub">Arah angin berbeda di tiap ketinggian, jadi abu dari satu letusan bisa menyebar ke arah yang berlawanan sekaligus. Ketuk lapisan untuk melihat masing-masing.</p>
     <div class="saring" id="saring-lapisan"></div>
+    <div class="saring saring-peta">
+      <button class="cip cip-alih" id="alih-siaga" type="button" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lapis"/></svg>Peta Siaga
+      </button>
+      <button class="cip cip-alih" id="alih-windy" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-main"/></svg>Peta Windy
+      </button>
+    </div>
+    <div class="saring" id="saring-windy" hidden></div>
     <div class="panel">
       <div id="peta-wadah"><div class="rangka" style="height:330px"></div></div>
+      <div id="windy-wadah" hidden></div>
       <div class="keterangan" id="peta-keterangan"></div>
       <p class="panel-kaki" id="peta-kaki"></p>
     </div>
@@ -127,6 +150,6 @@
   <p id="kaki-waktu"></p>
 </footer>
 
-<script src="app.js?v=5" type="module"></script>
+<script src="app.js?v=8" type="module"></script>
 </body>
 </html>

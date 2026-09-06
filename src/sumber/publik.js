@@ -87,25 +87,55 @@ export async function xSindikasi(akun) {
     .filter((x) => x.waktu);
 }
 
-/** Ambil isi satu posting X lewat FxTwitter. Tanpa kunci — untuk memperkaya tautan yang sudah diketahui. */
+/**
+ * FxTwitter: mengubah SATU tautan X yang sudah diketahui menjadi JSON bersih —
+ * teks penuh, penulis, waktu, foto/video, dan metrik. Tanpa kunci, tanpa batas.
+ *
+ * PENTING soal peran: FxTwitter TIDAK punya endpoint pencarian maupun linimasa.
+ * Sudah dicoba /latest, /timeline, /search — semuanya 404. Jadi ia bukan alat
+ * PENEMUAN, melainkan alat PENGAYAAN. Penemuan tetap harus datang dari tempat
+ * lain (linimasa sematan X, Nitter, atau tautan yang kamu pasang sendiri),
+ * lalu setiap tautan yang ditemukan dilewatkan ke sini supaya isinya utuh.
+ */
 export async function xLengkapi(url) {
-  const m = url.match(/(?:twitter|x)\.com\/([^/]+)\/status\/(\d+)/);
-  if (!m) return null;
+  const m = String(url).match(/(?:twitter|x)\.com\/([A-Za-z0-9_]{1,15})\/status\/(\d{10,25})/);
+  if (!m) throw new Error(`bukan tautan posting X: ${url}`);
   const j = await ambil(`https://api.fxtwitter.com/${m[1]}/status/${m[2]}`, {
     json: true,
     timeout: 12000,
+    headers: { Accept: 'application/json' },
   });
   const t = j?.tweet;
-  if (!t) return null;
+  if (!t) throw new Error(`FxTwitter tidak mengembalikan posting untuk ${m[2]}`);
+  const foto = t.media?.photos?.[0]?.url || null;
+  const video = t.media?.videos?.[0];
   return {
-    judul: (t.text || '').replace(/\s+/g, ' ').slice(0, 280),
-    tautan: t.url,
-    sumber: `@${t.author?.screen_name}`,
+    judul: (t.text || '').replace(/\s+/g, ' ').slice(0, 400),
+    tautan: t.url || `https://x.com/${m[1]}/status/${m[2]}`,
+    sumber: t.author?.screen_name ? `@${t.author.screen_name}` : `@${m[1]}`,
+    penulis: t.author?.name || null,
     waktu: t.created_at ? new Date(t.created_at).toISOString() : null,
-    gambar: t.media?.photos?.[0]?.url || null,
-    metrik: { suka: t.likes, ulang: t.retweets, lihat: t.views },
+    gambar: foto || video?.thumbnail_url || null,
+    adaVideo: !!video,
+    metrik: { suka: t.likes ?? null, ulang: t.retweets ?? null, lihat: t.views ?? null },
     kanal: 'x',
   };
+}
+
+/**
+ * Lengkapi banyak tautan sekaligus, beberapa saja pada satu waktu supaya
+ * FxTwitter tidak dibanjiri. Yang gagal dilewati, bukan menggagalkan sisanya.
+ */
+export async function xLengkapiBanyak(daftarUrl, serentak = 4) {
+  const unik = [...new Set(daftarUrl.filter(Boolean))];
+  const hasil = [];
+  const galat = [];
+  for (let i = 0; i < unik.length; i += serentak) {
+    const petak = await Promise.allSettled(unik.slice(i, i + serentak).map((u) => xLengkapi(u)));
+    for (const [n, p] of petak.entries())
+      p.status === 'fulfilled' ? hasil.push(p.value) : galat.push(`${unik[i + n]}: ${p.reason?.message}`);
+  }
+  return { hasil, galat };
 }
 
 /**
