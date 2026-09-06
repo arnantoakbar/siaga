@@ -86,6 +86,18 @@ function kirim(res, kode, tipe, badan, extra = {}) {
   res.end(badan);
 }
 
+/**
+ * Balasan yang isinya bergantung pada Accept-Encoding WAJIB membawa Vary.
+ * Tanpa itu, singgahan bersama (Cloudflare, proksi kantor, reverse proxy apa pun
+ * di depan layanan ini) boleh menyimpan satu varian lalu menyajikannya ke semua
+ * orang — pembaca yang tidak meminta gzip bisa menerima byte terkompresi dan
+ * melihat halaman rusak. Baru menggigit begitu ada CDN di depan.
+ */
+const kirimTerkompres = (res, kode, tipe, mentah, gzip, pakaiGzip, extra = {}) =>
+  pakaiGzip
+    ? kirim(res, kode, tipe, gzip, { ...extra, 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding' })
+    : kirim(res, kode, tipe, mentah, { ...extra, Vary: 'Accept-Encoding' });
+
 const srv = createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const terimaGzip = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
@@ -93,9 +105,7 @@ const srv = createServer(async (req, res) => {
   if (url.pathname === '/api/terkini') {
     const b = badanPotret();
     if (!b) return kirim(res, 503, MIME['.json'], Buffer.from('{"galat":"data belum tersedia, tunggu pengumpulan pertama"}'));
-    return terimaGzip
-      ? kirim(res, 200, MIME['.json'], b.gzip, { 'Content-Encoding': 'gzip', 'Cache-Control': 'no-cache' })
-      : kirim(res, 200, MIME['.json'], b.mentah, { 'Cache-Control': 'no-cache' });
+    return kirimTerkompres(res, 200, MIME['.json'], b.mentah, b.gzip, terimaGzip, { 'Cache-Control': 'no-cache' });
   }
 
   if (url.pathname === '/api/kesehatan') {
@@ -193,16 +203,16 @@ const srv = createServer(async (req, res) => {
     const cache = berversi ? 'public, max-age=31536000, immutable' : 'no-cache';
 
     if (req.headers['if-none-match'] === etag) {
-      res.writeHead(304, { ETag: etag, 'Cache-Control': cache });
+      res.writeHead(304, { ETag: etag, 'Cache-Control': cache, Vary: 'Accept-Encoding' });
       return res.end();
     }
 
     const isi = await readFile(berkas);
     const tipe = MIME[extname(berkas)] || 'application/octet-stream';
     const kepala = { 'Cache-Control': cache, ETag: etag };
-    if (terimaGzip && /text|json|javascript|svg/.test(tipe))
-      return kirim(res, 200, tipe, gzipSync(isi), { ...kepala, 'Content-Encoding': 'gzip' });
-    return kirim(res, 200, tipe, isi, kepala);
+    const bolehGzip = /text|json|javascript|svg/.test(tipe);
+    if (!bolehGzip) return kirim(res, 200, tipe, isi, kepala);
+    return kirimTerkompres(res, 200, tipe, isi, gzipSync(isi), terimaGzip, kepala);
   } catch {
     return kirim(res, 404, 'text/plain; charset=utf-8', Buffer.from('tidak ditemukan'));
   }

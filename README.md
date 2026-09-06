@@ -359,6 +359,13 @@ mengumpulkan data (503), halaman mencoba lagi dengan jeda naik bertahap sampai 3
 dan menampilkan spanduk yang menyebutkan apa yang terjadi — bukan menggantung sampai
 penyegaran lima menit.
 
+**Balasan yang dinegosiasi membawa `Vary`.** Isi `/api/terkini`, halaman, dan aset teks
+berbeda tergantung `Accept-Encoding` (17 KB terkompresi lawan 133 KB polos). Tanpa
+`Vary: Accept-Encoding`, singgahan bersama boleh menyimpan satu varian lalu menyajikannya
+ke semua orang, dan pembaca yang tidak meminta gzip menerima byte terkompresi. Ini hanya
+menggigit begitu ada CDN atau proksi di depan layanan — persis keadaan yang dituju bagian
+di atas.
+
 **Ikon punya ukuran bawaan.** Setiap ikon dari `ikon()` membawa kelas `.ikon` yang
 memberinya `1em`. Tanpa itu, `<svg>` tanpa atribut `width`/`height` diberi 300 × 150 oleh
 peramban, dan dengan `svg { display: block }` global sebuah ikon hiasan berubah jadi balok
@@ -439,6 +446,48 @@ WantedBy=multi-user.target
 ```bash
 sudo systemctl enable --now siaga
 ```
+
+### Menaruh CDN di depannya
+
+Kalau tautannya disebar luas, yang paling membebani homelab bukan kunjungan
+pertamanya, melainkan **tab yang dibiarkan terbuka**: tiap 60 detik satu tab di tab
+Situasi menarik `/api/cctv` berikut enam bingkai kamera — sekitar 33 KB dan 7 permintaan
+per menit per tab. Seribu tab terbuka berarti 7.000 permintaan per menit.
+
+Bingkai kamera memakai penanda waktu `?t=` yang berasal dari **waktu pengambilan di
+server**, bukan jam masing-masing pembaca. Jadi semua pembaca dalam satu jendela
+memakai kunci singgahan yang sama, dan satu pengambilan cukup melayani semuanya.
+
+Aturan singgahan yang perlu dibuat di Cloudflare (Rules → Cache Rules):
+
+| Cocokkan | Setelan |
+|---|---|
+| `http.request.uri.path eq "/api/terkini"` | Eligible for cache, Edge TTL **60 detik**, abaikan header asal |
+| `starts_with(http.request.uri.path, "/api/cctv")` | Eligible for cache, Edge TTL **45 detik**, abaikan header asal |
+
+Keduanya perlu "abaikan header asal" karena layanan ini mengirim `Cache-Control:
+no-cache` pada kedua jalur itu — benar untuk peramban, tapi menghalangi singgahan tepi.
+
+**Jangan** membuat satu aturan lebar untuk `/api/*`. Itu akan ikut menyinggahkan
+`/api/kesehatan`, dan pemantauan uptime kamu jadi membaca jawaban lama alih-alih keadaan
+sekarang. `/api/lokasi` memakai POST sehingga tidak pernah disinggahkan, tapi tetap jangan
+dimasukkan ke aturan apa pun.
+
+Aset berversi (`/app.js?v=…`) sudah `immutable` setahun dan disinggahkan Cloudflare tanpa
+aturan tambahan. Halaman induknya sengaja tidak disinggahkan di tepi karena ia yang
+menentukan versi aset mana yang dipakai.
+
+Konsekuensinya jujur: data bisa sampai 60 detik lebih lama dari yang ada di server.
+Pengumpulan sendiri berjalan tiap 10 menit, jadi selisih itu tidak berarti.
+
+Periksa aturannya bekerja:
+
+```bash
+curl -sI https://siaga.domainkamu.id/api/terkini | grep -i cf-cache-status
+```
+
+`HIT` berarti Cloudflare yang menjawab. `MISS` pada permintaan pertama tiap jendela
+memang wajar.
 
 ### Di balik reverse proxy
 
