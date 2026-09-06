@@ -1,0 +1,85 @@
+{
+  "_ispuSumber": "Peraturan Menteri LHK No. P.14/MENLHK/SETJEN/KUM.1/7/2020 tentang Indeks Standar Pencemar Udara, Lampiran I & II.",
+  "_ispuCatatan": "Konsentrasi dalam ug/m3 sebagai rata-rata bergerak 24 jam. ISPU akhir = nilai tertinggi di antara seluruh parameter (parameter dominan).",
+  "ispuTitikPatah": {
+    "pm2_5": [
+      { "iBawah": 0,   "iAtas": 50,  "xBawah": 0,     "xAtas": 15.5 },
+      { "iBawah": 51,  "iAtas": 100, "xBawah": 15.6,  "xAtas": 55.4 },
+      { "iBawah": 101, "iAtas": 200, "xBawah": 55.5,  "xAtas": 150.4 },
+      { "iBawah": 201, "iAtas": 300, "xBawah": 150.5, "xAtas": 250.4 },
+      { "iBawah": 301, "iAtas": 500, "xBawah": 250.5, "xAtas": 500 }
+    ],
+    "pm10": [
+      { "iBawah": 0,   "iAtas": 50,  "xBawah": 0,   "xAtas": 50 },
+      { "iBawah": 51,  "iAtas": 100, "xBawah": 51,  "xAtas": 150 },
+      { "iBawah": 101, "iAtas": 200, "xBawah": 151, "xAtas": 350 },
+      { "iBawah": 201, "iAtas": 300, "xBawah": 351, "xAtas": 420 },
+      { "iBawah": 301, "iAtas": 500, "xBawah": 421, "xAtas": 500 }
+    ],
+    "so2": [
+      { "iBawah": 0,   "iAtas": 50,  "xBawah": 0,   "xAtas": 52 },
+      { "iBawah": 51,  "iAtas": 100, "xBawah": 53,  "xAtas": 180 },
+      { "iBawah": 101, "iAtas": 200, "xBawah": 181, "xAtas": 400 },
+      { "iBawah": 201, "iAtas": 300, "xBawah": 401, "xAtas": 800 },
+      { "iBawah": 301, "iAtas": 500, "xBawah": 801, "xAtas": 1200 }
+    ]
+  },
+  "ispuKategori": [
+    { "sampai": 50,  "nama": "Baik",               "status": "aman",    "warna": "hijau" },
+    { "sampai": 100, "nama": "Sedang",             "status": "waspada", "warna": "amber" },
+    { "sampai": 200, "nama": "Tidak Sehat",        "status": "siaga",   "warna": "oranye" },
+    { "sampai": 300, "nama": "Sangat Tidak Sehat", "status": "bahaya",  "warna": "merah" },
+    { "sampai": 500, "nama": "Berbahaya",          "status": "bahaya",  "warna": "merah" }
+  ],
+
+  "_levelSumber": "Tingkat aktivitas gunung api, PVMBG Badan Geologi KESDM.",
+  "level": {
+    "I":   { "nama": "Normal",  "tingkat": 1, "status": "aman" },
+    "II":  { "nama": "Waspada", "tingkat": 2, "status": "waspada" },
+    "III": { "nama": "Siaga",   "tingkat": 3, "status": "siaga" },
+    "IV":  { "nama": "Awas",    "tingkat": 4, "status": "bahaya" }
+  },
+
+  "_arahSumber": "Sebaran abu mengikuti angin pada ketinggian kolom erupsi, bukan angin permukaan.",
+  "_arahCatatan": "Sektor toleransi 35 derajat adalah pendekatan penyebaran lateral plume; ini perkiraan arah, bukan prakiraan resmi sebaran abu. Prakiraan resmi ada di VONA PVMBG dan Darwin VAAC.",
+  "sektorToleransiDerajat": 35,
+  "jangkauanAbuKm": 400,
+
+  "_tindakanSumber": "Rekomendasi kesehatan abu vulkanik: IVHHN (International Volcanic Health Hazard Network) dan Kemenkes RI; kategori ISPU mengikuti Permen LHK P.14/2020 Lampiran III.",
+  "tindakanIspu": {
+    "Baik": ["Tidak ada tindakan khusus. Aktivitas luar ruang aman."],
+    "Sedang": [
+      "Kelompok sensitif (anak, lansia, ibu hamil, penderita asma/jantung) kurangi aktivitas berat di luar ruang.",
+      "Sedia masker kalau harus lama di luar."
+    ],
+    "Tidak Sehat": [
+      "Pakai masker N95 atau KN95 kalau keluar rumah. Masker kain dan masker bedah tidak menyaring abu halus.",
+      "Kelompok sensitif tetap di dalam ruang.",
+      "Tutup jendela dan ventilasi. Nyalakan penyaring udara kalau ada.",
+      "Batasi olahraga di luar ruang."
+    ],
+    "Sangat Tidak Sehat": [
+      "Semua orang tetap di dalam ruang. Keluar hanya kalau perlu, pakai masker N95/KN95.",
+      "Tutup rapat semua celah udara. Lap perabot dengan kain basah, jangan disapu kering.",
+      "Penderita asma dan penyakit paru siapkan obat dan hubungi fasilitas kesehatan kalau sesak."
+    ],
+    "Berbahaya": [
+      "Jangan keluar rumah. Ini kondisi darurat kesehatan.",
+      "Ikuti arahan evakuasi dari BPBD setempat.",
+      "Bawa penderita gangguan pernapasan ke fasilitas kesehatan terdekat."
+    ]
+  },
+  "tindakanAbu": [
+    "Pakai kacamata biasa, bukan lensa kontak. Abu vulkanik menggores kornea.",
+    "Tutup penampungan air dan sumur supaya tidak tercemar abu.",
+    "Siram abu dengan air dulu sebelum disapu, supaya tidak beterbangan lagi.",
+    "Jangan nyalakan wiper mobil di kaca berabu kering. Siram dulu, kaca bisa baret parah.",
+    "Bersihkan abu dari atap. Abu basah jauh lebih berat dan bisa merobohkan atap.",
+    "Masukkan hewan ternak dan peliharaan ke tempat tertutup."
+  ],
+  "tindakanZonaDilarang": [
+    "Jangan mendekat ke kawah dalam radius yang ditetapkan PVMBG. Ini larangan resmi, bukan imbauan.",
+    "Nelayan dan operator wisata: hentikan aktivitas di radius tersebut sampai status diturunkan.",
+    "Ikuti arahan evakuasi BPBD kabupaten/kota, bukan kabar dari media sosial."
+  ]
+}

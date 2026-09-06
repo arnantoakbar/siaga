@@ -1,0 +1,18 @@
+services:
+  siaga:
+    build: .
+    image: siaga:latest
+    container_name: siaga
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # Riwayat laporan dan deret kualitas udara hidup di sini.
+      # Hapus volume ini berarti kehilangan grafik tren antar periode.
+      - ./data:/app/data
+    environment:
+      TZ: Asia/Jakarta
+      PORT: 8080
+      INTERVAL_MENIT: 10
+      # Isi kalau kamu sudah punya token Threads yang lolos App Review Meta.
+      # THREADS_TOKEN: ""

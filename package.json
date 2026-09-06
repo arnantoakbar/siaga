@@ -1,0 +1,14 @@
+{
+  "name": "siaga",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Status Anak Krakatau, sebaran abu, dan tindakan yang perlu diambil — dari sumber resmi PVMBG/BMKG digabung perbincangan publik.",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js",
+    "tangkap": "node scripts/tangkap.mjs"
+  },
+  "dependencies": {}
+}

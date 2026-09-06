@@ -1,0 +1,7 @@
+data/
+docs/
+node_modules/
+.git/
+.DS_Store
+scripts/
+test.js
