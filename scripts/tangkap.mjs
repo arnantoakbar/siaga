@@ -16,21 +16,31 @@ const CHROME =
 const PORT = 9333;
 
 const ADEGAN = [
-  { nama: '01-situasi-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi' },
-  { nama: '02-cctv-mobile',    w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi', gulir: 720 },
+  { nama: '01-situasi-mobile', w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'situasi' },
+  { nama: '02-cctv-mobile',    w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi', gulir: 1150 },
   { nama: '03-lokasi-mobile',  w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'lokasi', gulir: 430 },
   { nama: '04-dampak-mobile',  w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'dampak' },
   {
-    nama: '05-tindakan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'dampak', gulir: 640,
+    nama: '05-tindakan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'dampak', gulir: 700,
     siapkan: `document.querySelectorAll('.petak-sel')[2]?.click();`, jeda: 700,
   },
-  { nama: '06-sumber-mobile',  w: 390, h: 940, dsf: 3, tema: 'gelap', tab: 'sumber' },
-  { nama: '07-situasi-terang', w: 390, h: 900, dsf: 3, tema: 'terang', tab: 'situasi' },
-  { nama: '08-situasi-desktop',w: 1100, h: 900, dsf: 2, tema: 'terang', tab: 'situasi' },
+  { nama: '06-linimasa-mobile', w: 390, h: 980, dsf: 3, tema: 'gelap', tab: 'sumber', gulir: 250 },
+  { nama: '07-situasi-terang', w: 390, h: 940, dsf: 3, tema: 'terang', tab: 'situasi' },
+  { nama: '08-situasi-desktop',w: 1100, h: 940, dsf: 2, tema: 'terang', tab: 'situasi' },
   { nama: '09-peta-desktop',   w: 1100, h: 940, dsf: 2, tema: 'terang', tab: 'lokasi', gulir: 300 },
-  { nama: '10-dampak-desktop', w: 1100, h: 900, dsf: 2, tema: 'gelap', tab: 'dampak' },
+  { nama: '10-linimasa-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'sumber', gulir: 220 },
   {
-    nama: '11-lokasi-perangkat', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'lokasi',
+    nama: '11-bantuan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi',
+    siapkan: `document.querySelector('#tombol-bantuan').click();`, jeda: 900,
+  },
+  {
+    nama: '12-udara-desktop', w: 1100, h: 780, dsf: 2, tema: 'gelap', tab: 'dampak',
+    siapkan: `const d = document.querySelector('#udara-wadah').closest('details');
+      d.open = true; d.dispatchEvent(new Event('toggle'));`,
+    jeda: 1200, gulir: 620,
+  },
+  {
+    nama: '13-lokasi-perangkat', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'lokasi',
     // Chrome headless tidak punya lokasi sungguhan; getCurrentPosition diganti
     // koordinat Bandung supaya alurnya bisa dipotret apa adanya.
     siapkan: `navigator.geolocation.getCurrentPosition = (ok) =>
@@ -39,7 +49,7 @@ const ADEGAN = [
     jeda: 3200,
   },
   {
-    nama: '12-windy-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'lokasi', gulir: 240,
+    nama: '14-windy-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'lokasi', gulir: 240,
     // Persetujuan harus lewat tombolnya: menulis localStorage saja tidak cukup,
     // karena nilainya sudah dibaca ke memori saat skrip halaman dimuat.
     siapkan: `document.querySelector('#alih-windy').click();

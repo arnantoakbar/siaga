@@ -53,6 +53,9 @@ async function kanalPublik(db) {
   const hasil = await Promise.all([
     coba(db, 'berita', () => publik.berita(g)),
     coba(db, 'berita-abu', () => publik.berita('abu vulkanik')),
+    coba(db, 'berita-penerbit', () => publik.beritaPenerbit(CONFIG.umpanBerita || [], [
+      g.toLowerCase(), ...(CONFIG.sumberX.kataKunci || []), 'abu vulkanik', 'erupsi',
+    ])),
     CONFIG.sumberX.aktif
       ? coba(db, 'x-nitter', () => publik.xNitter(CONFIG.sumberX.nitterInstances, kunci))
       : { nama: 'x-nitter', ok: false, pesan: 'dimatikan lewat config', waktu: new Date().toISOString() },

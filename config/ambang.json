@@ -285,5 +285,13 @@
       "teks": "Ikuti arahan evakuasi BPBD kabupaten/kota, bukan kabar dari media sosial."
     }
   ],
-  "_tindakanFormat": "Tiap tindakan: teks (kalimat lengkap, tidak diringkas), ringkas (judul kartu di infografis), ikon (nama simbol di sprite public/index.html). Mengubah `teks` berarti mengubah anjuran resmi — jangan."
+  "_tindakanFormat": "Tiap tindakan: teks (kalimat lengkap, tidak diringkas), ringkas (judul kartu di infografis), ikon (nama simbol di sprite public/index.html). Mengubah `teks` berarti mengubah anjuran resmi — jangan.",
+  "sumberTautan": {
+    "PVMBG": "https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas",
+    "Permen LHK P.14/2020": "https://peraturan.bpk.go.id/Details/168470/permen-lhk-no-p14menlhksetjenkum172020",
+    "IVHHN / Kemenkes": "https://www.ivhhn.org/information/information-different-volcanic-ashfall-impacts",
+    "Open-Meteo CAMS (model, bukan sensor darat)": "https://open-meteo.com/en/docs/air-quality-api",
+    "Open-Meteo (angin lapisan tekanan)": "https://open-meteo.com/en/docs"
+  },
+  "_sumberTautan": "Tautan rujukan per sumber, ditampilkan di tiap kartu tindakan supaya pembaca bisa memeriksa sendiri."
 }

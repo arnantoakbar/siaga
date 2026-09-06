@@ -85,3 +85,24 @@ const MATA_ANGIN = ['utara','timur laut','timur','tenggara','selatan','barat day
 export function mataAngin(deg) {
   return MATA_ANGIN[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 }
+
+/**
+ * Lebar dan tinggi JPEG dari penanda SOF-nya. Dipakai supaya tiap bingkai kamera
+ * ditampilkan dengan rasio aslinya — kamera PVMBG tidak semuanya 150x84, dan
+ * memaksa satu rasio membuat sebagian gambar terpotong.
+ */
+export function ukuranJpeg(buf) {
+  if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
+  let i = 2;
+  while (i < buf.length - 8) {
+    if (buf[i] !== 0xff) { i++; continue; }
+    const penanda = buf[i + 1];
+    // SOF0..SOF3 dan SOF5..SOF7, SOF9..SOF11, SOF13..SOF15 membawa dimensi
+    if (penanda >= 0xc0 && penanda <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(penanda))
+      return { tinggi: buf.readUInt16BE(i + 5), lebar: buf.readUInt16BE(i + 7) };
+    const panjang = buf.readUInt16BE(i + 2);
+    if (panjang < 2) return null;
+    i += 2 + panjang;
+  }
+  return null;
+}

@@ -57,13 +57,17 @@ export function jalurAbu(arahKota, jarak, angin, ambang) {
 }
 
 /** `isi` boleh string (teks saja) atau objek {teks, ringkas, ikon} dari config. */
-function tindakan(isi, dasar, sumber, prioritas) {
+function tindakan(isi, dasar, sumber, prioritas, tautan) {
   const o = typeof isi === 'string' ? { teks: isi } : isi;
-  return { teks: o.teks, ringkas: o.ringkas ?? null, ikon: o.ikon ?? 'awas', dasar, sumber, prioritas };
+  return {
+    teks: o.teks, ringkas: o.ringkas ?? null, ikon: o.ikon ?? 'awas',
+    dasar, sumber, sumberUrl: tautan ?? null, prioritas,
+  };
 }
 
 /** Analisa satu kota. */
 export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
+  const tautanSumber = (nama) => ambang.sumberTautan?.[nama] ?? null;
   const jarak = Math.round(jarakKm(gunung.lat, gunung.lon, kota.lat, kota.lon));
   const arah = Math.round(arahDerajat(gunung.lat, gunung.lon, kota.lat, kota.lon));
   const radius = radiusResmiKm(laporan?.rekomendasi);
@@ -79,6 +83,7 @@ export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
       kode: 'zona-dilarang',
       teks: `${kota.nama} berada di dalam radius larangan ${radius} km dari kawah.`,
       sumber: 'PVMBG',
+      sumberUrl: laporan?.url || tautanSumber('PVMBG'),
     });
   }
 
@@ -88,6 +93,7 @@ export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
       kode: 'ispu',
       teks: `ISPU ${ispu.nilai} (${ispu.kategori}), ditentukan oleh ${ispu.dominan.toUpperCase().replace('_', '.')}.`,
       sumber: 'Open-Meteo CAMS (model, bukan sensor darat)',
+      sumberUrl: tautanSumber('Open-Meteo CAMS (model, bukan sensor darat)'),
     });
   }
 
@@ -98,6 +104,7 @@ export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
       kode: 'jalur-abu',
       teks: `Angin di ketinggian ~${l.kmKira} km menghembus ke ${mataAngin(l.arahHembusDerajat)} (${Math.round(l.arahHembusDerajat)}°), searah posisi ${kota.nama}. Selisih ${Math.round(l.selisih)}°.`,
       sumber: 'Open-Meteo (angin lapisan tekanan)',
+      sumberUrl: tautanSumber('Open-Meteo (angin lapisan tekanan)'),
     });
   }
 
@@ -105,7 +112,7 @@ export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
   const langkah = [];
   if (radius != null && jarak <= radius)
     for (const t of ambang.tindakanZonaDilarang)
-      langkah.push(tindakan(t, `Jarak ${jarak} km, di dalam radius larangan ${radius} km`, 'PVMBG', 1));
+      langkah.push(tindakan(t, `Jarak ${jarak} km, di dalam radius larangan ${radius} km`, 'PVMBG', 1, tautanSumber('PVMBG')));
 
   for (const r of laporan?.rekomendasi || []) {
     // Teks PVMBG dikutip utuh; hanya judul kartunya yang diringkas, dan itu pun
@@ -116,18 +123,19 @@ export function analisaKota(kota, gunung, laporan, udara, angin, ambang) {
         { teks: r, ringkas: km ? `Jauhi radius ${km.replace(',', '.')} km` : 'Rekomendasi PVMBG', ikon: 'perisai' },
         `Rekomendasi resmi pada laporan ${laporan.tanggal} periode ${laporan.periodeMulai}-${laporan.periodeSelesai} WIB`,
         'PVMBG',
-        1
+        1,
+        laporan.url || tautanSumber('PVMBG')
       )
     );
   }
 
   if (ispu)
     for (const t of ambang.tindakanIspu[ispu.kategori] || [])
-      langkah.push(tindakan(t, `ISPU ${ispu.nilai} — ${ispu.kategori}`, 'Permen LHK P.14/2020', ispu.status === 'aman' ? 4 : 2));
+      langkah.push(tindakan(t, `ISPU ${ispu.nilai} — ${ispu.kategori}`, 'Permen LHK P.14/2020', ispu.status === 'aman' ? 4 : 2, tautanSumber('Permen LHK P.14/2020')));
 
   if (abu || (ispu && ispu.status !== 'aman'))
     for (const t of ambang.tindakanAbu)
-      langkah.push(tindakan(t, abu ? 'Kota berada di jalur sebaran abu' : 'Kualitas udara terpengaruh abu', 'IVHHN / Kemenkes', 3));
+      langkah.push(tindakan(t, abu ? 'Kota berada di jalur sebaran abu' : 'Kualitas udara terpengaruh abu', 'IVHHN / Kemenkes', 3, tautanSumber('IVHHN / Kemenkes')));
 
   return {
     kotaId: kota.id,

@@ -153,5 +153,20 @@
       "https://x.com/infoBMKG/status/2096418877047451744"
     ],
     "_postPilihan": "Tautan posting X yang selalu ditampilkan, diambil isinya lewat FxTwitter tanpa kunci. Berguna saat penemuan otomatis (x-resmi / x-nitter) sedang mati. Dua contoh di bawah adalah pengumuman resmi BMKG untuk erupsi September 2026 — kosongkan daftarnya kalau sudah tidak relevan."
-  }
+  },
+  "umpanBerita": [
+    {
+      "nama": "ANTARA",
+      "url": "https://www.antaranews.com/rss/terkini.xml"
+    },
+    {
+      "nama": "CNN Indonesia",
+      "url": "https://www.cnnindonesia.com/nasional/rss"
+    },
+    {
+      "nama": "Tempo",
+      "url": "https://rss.tempo.co/nasional"
+    }
+  ],
+  "_umpanBerita": "RSS penerbit langsung: membawa URL artikel asli dan gambar sampul, hal yang tidak diberikan Google News. Isinya semua berita, jadi disaring dengan sumberX.kataKunci."
 }

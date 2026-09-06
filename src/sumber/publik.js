@@ -10,6 +10,21 @@ const isi = (xml, tag) => {
   return unesc(m[1].replace(/^<!\[CDATA\[|\]\]>$/g, '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 };
 
+/** Gambar sampul dari <enclosure>, <media:content>, atau <img> di deskripsi. */
+function gambarItem(it) {
+  const cari = [
+    /<enclosure[^>]+url="([^"]+)"[^>]*type="image/i,
+    /<enclosure[^>]+type="image[^"]*"[^>]*url="([^"]+)"/i,
+    /<media:(?:content|thumbnail)[^>]+url="([^"]+)"/i,
+    /<img[^>]+src="([^"]+)"/i,
+  ];
+  for (const re of cari) {
+    const m = it.match(re);
+    if (m?.[1]?.startsWith('http')) return unesc(m[1]);
+  }
+  return null;
+}
+
 function uraiRss(xml, batas = 30) {
   return [...xml.matchAll(/<item[^>]*>([\s\S]*?)<\/item>/gi)]
     .slice(0, batas)
@@ -24,6 +39,7 @@ function uraiRss(xml, batas = 30) {
         sumber: isi(it, 'source') || isi(it, 'dc:creator') || null,
         waktu: Number.isFinite(ms) ? new Date(ms).toISOString() : null,
         ringkas: isi(it, 'description').slice(0, 300),
+        gambar: gambarItem(it),
       };
     })
     .filter((x) => x.judul && x.waktu);
@@ -34,6 +50,25 @@ export async function berita(kataKunci) {
   const q = encodeURIComponent(kataKunci);
   const xml = await ambil(`https://news.google.com/rss/search?q=${q}&hl=id&gl=ID&ceid=ID:id`);
   return uraiRss(xml).map((b) => ({ ...b, kanal: 'berita' }));
+}
+
+/**
+ * RSS penerbit langsung. Google News punya jangkauan paling luas tapi tautannya
+ * lewat pengalih Google dan tidak pernah membawa gambar. Umpan penerbit membawa
+ * URL artikel asli DAN gambar sampulnya, jadi keduanya dipakai bersama.
+ * Karena umpan ini berisi semua berita, hasilnya disaring dengan kata kunci.
+ */
+export async function beritaPenerbit(umpan, kataKunci) {
+  const kunci = kataKunci.map((k) => k.toLowerCase());
+  const per = await Promise.allSettled(
+    umpan.map(async (u) => {
+      const item = uraiRss(await ambil(u.url, { timeout: 15000 }), 60);
+      return item.map((x) => ({ ...x, kanal: 'berita', sumber: x.sumber || u.nama }));
+    })
+  );
+  const semua = per.filter((p) => p.status === 'fulfilled').flatMap((p) => p.value);
+  if (!semua.length) throw new Error(per.map((p) => p.reason?.message).filter(Boolean).join(' | ') || 'kosong');
+  return semua.filter((x) => kunci.some((k) => `${x.judul} ${x.ringkas}`.toLowerCase().includes(k)));
 }
 
 /**

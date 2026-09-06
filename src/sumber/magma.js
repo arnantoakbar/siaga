@@ -2,7 +2,7 @@
 // Tidak ada API publik tanpa token, jadi halaman HTML server-rendered yang dibaca.
 // Kalau layout MAGMA berubah, parser melempar error dan pemanggilnya wajib menandai
 // sumber ini "gagal" — bukan menyajikan data lama seolah-olah masih berlaku.
-import { ambil, keTeks, unesc } from '../util.js';
+import { ambil, keTeks, unesc, ukuranJpeg } from '../util.js';
 
 const BASE = 'https://magma.esdm.go.id/v1/gunung-api';
 const RE_LEVEL = /Level\s+(I|II|III|IV)\s*\((Normal|Waspada|Siaga|Awas)\)/g;
@@ -128,10 +128,12 @@ export async function cctv(kode) {
     const sisa = bagian.slice(batas + 1);
     const nama = (sisa.match(/<small class="text-right">\s*([^<]{3,90}?)\s*<\/small>/) || [])[1];
     if (!b64) continue;
+    const jpeg = Buffer.from(b64, 'base64');
     keluar.push({
       id: String(i),
       nama: unesc(nama || `Kamera ${i + 1}`).trim(),
-      jpeg: Buffer.from(b64, 'base64'),
+      jpeg,
+      ...(ukuranJpeg(jpeg) || {}),
     });
   }
   if (!keluar.length) throw new Error('MAGMA: tidak ada bingkai kamera terbaca');

@@ -32,15 +32,27 @@ pada layar lebar. Di atasnya ada **strip status yang selalu terlihat di tab mana
 level gunung dan status kotamu, dua angka yang paling menentukan keputusan. Rincian yang
 tidak semua orang butuhkan disimpan di balik lipatan.
 
+Tombol **?** di kanan atas membuka panduan empat langkah singkat: baca strip, pilih kota,
+lihat tab Dampak, periksa tab Sumber kalau ragu. Dialognya memakai elemen `<dialog>`
+bawaan peramban, jadi Esc, jebakan fokus, dan lapisan gelapnya datang gratis.
+
 ## Tampilan
 
 | Situasi | Kamera pemantau | Lokasimu |
 |---|---|---|
 | ![Situasi](docs/01-situasi-mobile.png) | ![CCTV](docs/02-cctv-mobile.png) | ![Lokasi](docs/03-lokasi-mobile.png) |
 
-| Dampak | Infografis tindakan | Sumber |
+| Dampak | Infografis tindakan | Cara pakai |
 |---|---|---|
-| ![Dampak](docs/04-dampak-mobile.png) | ![Tindakan](docs/05-tindakan-mobile.png) | ![Sumber](docs/06-sumber-mobile.png) |
+| ![Dampak](docs/04-dampak-mobile.png) | ![Tindakan](docs/05-tindakan-mobile.png) | ![Bantuan](docs/11-bantuan-mobile.png) |
+
+**Linimasa sumber.** Satu aliran kronologis, terbaru di atas, dengan gambar sampul dari
+umpan penerbit. Tiap butir membawa lencana asalnya: **Resmi** kalau datang dari akun
+lembaga, **Berita** kalau liputan media, **Perbincangan** kalau unggahan yang sedang ramai.
+
+| Ponsel | Layar lebar |
+|---|---|
+| ![Linimasa](docs/06-linimasa-mobile.png) | ![Linimasa desktop](docs/10-linimasa-desktop.png) |
 
 **Situasi — layar lebar.** Navigasi naik ke atas, kamera jadi tiga kolom.
 
@@ -52,16 +64,15 @@ berbeda di tiap ketinggian — abu di 3 km bisa ke tenggara sementara abu di 10 
 
 ![Peta desktop](docs/09-peta-desktop.png)
 
-| Lokasi perangkat | Lapisan Windy |
+| Kualitas udara 24 jam | Lokasi perangkat |
 |---|---|
-| ![Lokasi perangkat](docs/11-lokasi-perangkat.png) | ![Windy](docs/12-windy-desktop.png) |
+| ![Udara](docs/12-udara-desktop.png) | ![Lokasi perangkat](docs/13-lokasi-perangkat.png) |
 
-Mode terang mengikuti pengaturan perangkat, dan bisa dikunci lewat tombol di kanan atas
-(ikut perangkat → terang → gelap):
+Mode terang mengikuti pengaturan perangkat, dan bisa dikunci lewat tombol di kanan atas:
 
-| Terang | Dampak, layar lebar |
+| Terang | Lapisan Windy |
 |---|---|
-| ![Terang](docs/07-situasi-terang.png) | ![Dampak desktop](docs/10-dampak-desktop.png) |
+| ![Terang](docs/07-situasi-terang.png) | ![Windy](docs/14-windy-desktop.png) |
 
 ## Sumber data
 
@@ -76,7 +87,8 @@ Semua ditarik di sisi server tiap 10 menit. Tidak ada satu pun yang butuh kunci 
 | **BMKG** — [`autogempa.json`](https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json) dll. | Gempa tektonik (dipisahkan dari gempa vulkanik) | JSON publik | ✅ jalan |
 | **Open-Meteo Air Quality (CAMS)** | PM2.5 / PM10 / SO₂ per kota → ISPU | JSON publik | ✅ jalan |
 | **Open-Meteo Forecast** | Angin pada 850/700/500/250 hPa di atas kawah | JSON publik | ✅ jalan |
-| **Google News RSS (id)** | Kabar terbaru dari puluhan media | RSS | ✅ jalan |
+| **Google News RSS (id)** | Jangkauan terluas: kabar dari puluhan media | RSS | ✅ jalan |
+| **RSS penerbit** — ANTARA, CNN Indonesia, Tempo | URL artikel asli **dan gambar sampul**, yang tidak diberikan Google News | RSS, gambar dari `enclosure`/`media:content` | ✅ jalan |
 | **X** — endpoint sematan `syndication.twitter.com` | **Menemukan** unggahan akun resmi (@infoBMKG, @BNPB_Indonesia, …) | Baca `__NEXT_DATA__` | ⚠️ tergantung reputasi IP |
 | **X** — pencarian kata kunci lewat Nitter | **Menemukan** unggahan warga | RSS instans Nitter | ⚠️ perlu whitelist, lihat di bawah |
 | **X** — [FxTwitter](https://github.com/FixTweet/FxTwitter) | **Melengkapi** tiap unggahan: teks penuh, foto, video, metrik | `api.fxtwitter.com` | ✅ jalan, tanpa kunci |
@@ -150,14 +162,17 @@ yang bisa dibuka pembaca lewat "Kenapa ini muncul".
 
 ### Status gunung
 
-Langsung dari **level PVMBG**, tidak ditafsirkan ulang:
+Langsung dari **level PVMBG**, tidak ditafsirkan ulang. Halaman menampilkannya sebagai
+tangga empat tingkat — makin ke kanan makin berbahaya — dengan tingkat yang sedang
+berlaku disorot, arti tingkat berikutnya kalau naik, dan arti keempatnya di balik lipatan.
+Tanpa itu, "Level III" tidak memberi tahu apa pun kepada orang yang baru pertama membaca.
 
-| Level | Nama | Status |
+| Level | Nama | Artinya |
 |---|---|---|
-| I | Normal | aman |
-| II | Waspada | waspada |
-| III | Siaga | siaga |
-| IV | Awas | bahaya |
+| I | Normal | Tidak ada gejala tekanan magma yang berarti |
+| II | Waspada | Aktivitas naik di atas normal, ada potensi erupsi |
+| III | Siaga | Gunung sudah erupsi atau sangat mungkin erupsi, ada radius yang dilarang |
+| IV | Awas | Erupsi besar sedang berlangsung atau segera terjadi, ikuti perintah evakuasi |
 
 ### Status kota
 
@@ -177,6 +192,14 @@ Diambil yang **paling tinggi** dari tiga aturan:
 Status gunung dan status kota **tidak dicampur**. Kota 250 km jauhnya dengan udara bersih
 tidak jadi "siaga" hanya karena gunungnya Level III.
 
+### Ringkasan situasi
+
+Kalimat pembuka di tab Situasi **dirangkai ulang setiap kali data masuk**, bukan teks
+tetap: jumlah gempa letusan periode ini, apakah erupsi menerus sudah berhenti, apakah
+tremor masih terekam, ke arah mana angin terkuat membawa abu, dan berapa kota yang berada
+di jalur sebarannya. Kalau sebuah angka tidak ada di laporan, kalimatnya tidak dibuat —
+bukan diisi tebakan.
+
 ### Rekomendasi tindakan
 
 Digabung dari empat asal, semuanya dikutip apa adanya:
@@ -186,6 +209,11 @@ Digabung dari empat asal, semuanya dikutip apa adanya:
 - **Tindakan khas abu vulkanik** — IVHHN dan Kemenkes (masker N95, kacamata bukan lensa
   kontak, tutup penampungan air, siram sebelum menyapu, jangan pakai wiper kering).
 - **Aturan zona larangan** kalau kota berada di dalam radius.
+
+Setiap anjuran dan setiap alasan status membawa **tautan rujukan yang bisa dibuka**:
+laporan PVMBG yang bersangkutan, teks Permen LHK P.14/2020 di JDIH BPK, panduan IVHHN,
+atau dokumentasi Open-Meteo. Tautannya ada di `sumberTautan` pada `config/ambang.json` —
+kalau kamu mengubah sebuah ambang, ubah juga rujukannya.
 
 Kalau data sumbernya tidak ada, keluarannya kosong — bukan diisi nilai default yang
 kelihatan meyakinkan.
@@ -206,6 +234,11 @@ ditembus — yang dibaca persis gambar yang MAGMA tampilkan sendiri.
 - **Disajikan dari server sendiri** (`/api/cctv/<n>.jpg`, singgahan 45 detik), supaya
   peramban pembaca tidak menembak MAGMA satu per satu dan tanda tangan URL mereka tidak
   bocor ke klien. Berapa pun jumlah pembaca, MAGMA ditanya paling sering 45 detik sekali.
+  Enam permintaan gambar yang berangkat bersamaan **dijaga satu penjaga**, jadi saat
+  singgahan kedaluwarsa tetap hanya ada satu pengambilan — bukan enam.
+- **Rasio tiap kamera dibaca dari berkas JPEG-nya**, bukan diseragamkan: dua dari enam
+  kamera merekam 150 × 113. Bingkai yang gagal dimuat menampilkan keterangan, bukan ikon
+  gambar rusak bawaan peramban.
 - **Lisensi CC BY-NC-ND 4.0, PVMBG Badan Geologi.** Gambar disajikan apa adanya, tanpa
   modifikasi, dengan atribusi dan tautan balik di bawah setiap grid. Kalau kamu memakai
   proyek ini untuk sesuatu yang komersial, lisensi itu tidak mengizinkannya.

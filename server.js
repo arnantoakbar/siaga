@@ -37,14 +37,25 @@ const cacheLokasi = new Map();
 // 45 detik: cukup segar untuk disebut pemantauan langsung, cukup jarang untuk
 // tidak membebani server mereka berapa pun jumlah pembaca halaman ini.
 let cacheCctv = { pada: 0, kamera: [], galat: null };
+let cctvBerjalan = null;
 async function ambilCctv() {
   if (Date.now() - cacheCctv.pada < 45_000 && cacheCctv.kamera.length) return cacheCctv;
-  try {
-    cacheCctv = { pada: Date.now(), kamera: await magma.cctv(CONFIG.gunung.kodeMagma), galat: null };
-  } catch (e) {
-    cacheCctv = { pada: Date.now(), kamera: cacheCctv.kamera, galat: String(e.message).slice(0, 200) };
-  }
-  return cacheCctv;
+  // Enam <img> berangkat bersamaan begitu grid digambar. Tanpa penjaga ini,
+  // keenamnya menembak MAGMA sekaligus saat singgahan kedaluwarsa dan sebagian
+  // bisa gagal — pembaca melihat bingkai rusak. Satu pengambilan, semua menunggu.
+  if (cctvBerjalan) return cctvBerjalan;
+  cctvBerjalan = (async () => {
+    try {
+      cacheCctv = { pada: Date.now(), kamera: await magma.cctv(CONFIG.gunung.kodeMagma), galat: null };
+    } catch (e) {
+      // Bingkai lama dipertahankan; umurnya tetap dilaporkan apa adanya.
+      cacheCctv = { ...cacheCctv, pada: Date.now(), galat: String(e.message).slice(0, 200) };
+    } finally {
+      cctvBerjalan = null;
+    }
+    return cacheCctv;
+  })();
+  return cctvBerjalan;
 }
 
 async function segarkan() {
@@ -109,7 +120,7 @@ const srv = createServer(async (req, res) => {
         galat: c.galat,
         lisensi: 'CC BY-NC-ND 4.0 — PVMBG, Badan Geologi KESDM',
         sumberUrl: `https://magma.esdm.go.id/v1/gunung-api/cctv/${CONFIG.gunung.kodeMagma}`,
-        kamera: c.kamera.map((k) => ({ id: k.id, nama: k.nama, bytes: k.jpeg.length })),
+        kamera: c.kamera.map((k) => ({ id: k.id, nama: k.nama, lebar: k.lebar ?? null, tinggi: k.tinggi ?? null, bytes: k.jpeg.length })),
       })
     );
     return kirim(res, c.kamera.length ? 200 : 503, MIME['.json'], badan, { 'Cache-Control': 'no-cache' });
