@@ -34,12 +34,8 @@ const ADEGAN = [
     nama: '11-bantuan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi',
     siapkan: `document.querySelector('#tombol-bantuan').click();`, jeda: 900,
   },
-  {
-    nama: '12-udara-desktop', w: 1100, h: 780, dsf: 2, tema: 'gelap', tab: 'dampak',
-    siapkan: `const d = document.querySelector('#udara-wadah').closest('details');
-      d.open = true; d.dispatchEvent(new Event('toggle'));`,
-    jeda: 1200, ke: '#udara-wadah', blok: 'center',
-  },
+  { nama: '12-udara-desktop', w: 1100, h: 780, dsf: 2, tema: 'gelap', tab: 'dampak',
+    ke: '#udara-wadah', blok: 'center' },
   {
     nama: '13-lokasi-perangkat', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'lokasi',
     // Chrome headless tidak punya lokasi sungguhan; getCurrentPosition diganti

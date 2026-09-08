@@ -24,7 +24,7 @@ menjadi sekitar 1.700–1.900 piksel per tampilan.
 |---|---|---|
 | **Situasi** | Apa yang sedang terjadi di gunungnya? | Level dan rekomendasi PVMBG, kamera pemantau, kegempaan |
 | **Lokasimu** | Di mana aku, dan ke mana abunya? | Pemilih kota atau lokasi perangkat, peta sebaran, angin per ketinggian |
-| **Dampak** | Artinya apa buat aku? | Status kota, ISPU, infografis tindakan, bandara sekitar, kualitas udara 24 jam |
+| **Dampak** | Artinya apa buat aku? | Status kota, ISPU, grafik kualitas udara 24 jam, infografis tindakan, bandara sekitar |
 | **Sumber** | Dari mana angka ini? | Kabar resmi vs perbincangan, kesehatan tiap sumber, cara perhitungan |
 
 Navigasinya di **bawah layar pada ponsel** supaya terjangkau jempol, dan pindah ke atas
@@ -46,9 +46,9 @@ bawaan peramban, jadi Esc, jebakan fokus, dan lapisan gelapnya datang gratis.
 |---|---|---|
 | ![Dampak](docs/04-dampak-mobile.png) | ![Tindakan](docs/05-tindakan-mobile.png) | ![Bantuan](docs/11-bantuan-mobile.png) |
 
-**Bandara di sekitar.** Peringatan abu untuk penerbangan (SIGMET) dan kondisi yang
-dilaporkan tiap bandara sendiri. Blok ini tidak pernah menulis "buka" atau "tutup" —
-alasannya di [bawah](#bandara--penerbangan).
+**Bandara di sekitar.** Kabar penutupan dan pembukaan, peringatan abu untuk penerbangan
+(SIGMET), dan kondisi yang dilaporkan tiap bandara sendiri. Blok ini tidak pernah
+*menyimpulkan* buka atau tutup — alasannya di [bawah](#bandara--penerbangan).
 
 | Gelap | Terang |
 |---|---|
@@ -103,7 +103,8 @@ Semua ditarik di sisi server tiap 10 menit. Tidak ada satu pun yang butuh kunci 
 | **Threads** | Unggahan warga | Threads Graph API | ❌ perlu App Review Meta — [panduan token](docs/threads.md) |
 | **NOAA Aviation Weather Center** — [`isigmet`](https://aviationweather.gov/api/data/isigmet?format=raw) | SIGMET abu vulkanik FIR Jakarta — peringatan resmi untuk penerbangan | JSON publik | ✅ jalan |
 | **NOAA Aviation Weather Center** — [`metar`](https://aviationweather.gov/api/data/metar?ids=WIII&format=raw) | Kondisi teramati di tiap bandara: abu, jarak pandang, cuaca | JSON publik | ✅ jalan |
-| **NOTAM** — pengumuman resmi bandara ditutup | Status buka/tutup bandara | — | ❌ tidak ada saluran gratis, lihat di bawah |
+| **Google News RSS** — kueri penerbangan | Kabar penutupan & pembukaan bandara: pengumuman AirNav dan Kemenhub seperti diberitakan | RSS | ✅ jalan |
+| **NOTAM** — pengumuman resmi bandara ditutup | Status buka/tutup langsung dari sumbernya | — | ❌ tidak ada saluran gratis, lihat di bawah |
 | **Windy** (opsional, atas persetujuan pembaca) | Lapisan angin / PM2.5 / aerosol di peta | iframe `embed.windy.com` | ✅ jalan |
 
 Yang gagal **tidak disembunyikan**. Bagian "Dari mana datanya" di halaman menampilkan
@@ -264,9 +265,24 @@ Pertanyaan yang muncul begitu abu naik: *penerbangan saya jadi atau tidak?* Blok
 tab **Dampak** menjawab sejauh yang benar-benar bisa dijawab dari data terbuka — tidak
 lebih.
 
-**Yang ditampilkan ada dua lapis.**
+**Yang ditampilkan ada tiga lapis.**
 
-**1. SIGMET abu vulkanik.** SIGMET adalah peringatan resmi cuaca berbahaya untuk
+**1. Kabar penutupan dan pembukaan.** Lapis yang paling langsung menjawab. Google News
+RSS dengan kueri `(bandara OR penerbangan) (krakatau OR "abu vulkanik")`, diurutkan
+terbaru di atas, dengan jam terbit yang ditulis mencolok. Isinya pengumuman AirNav
+Indonesia dan Kemenhub sebagaimana diberitakan — dan karena Google News ikut mengindeks
+situs resmi, sebagian hasilnya memang terbitan lembaganya sendiri (kemenhub.go.id,
+bmkg.go.id, setneg, presidenri.go.id).
+
+Judul yang menyebut nama sebuah bandara juga ditempelkan ke kartu bandara itu, satu judul
+terbaru saja. Pencocokannya lewat `alias` di config (`"soetta"`, `"halim"`), bukan nama
+kota — kalau tidak, berita banjir Palembang ikut nempel ke bandaranya.
+
+Judulnya **tidak** diringkas jadi lencana buka/tutup. Status bandara berubah beberapa kali
+sehari: "ditutup sampai pukul 10.00" dan "kembali beroperasi" bisa terbit berjarak dua
+jam. Jamnya ditulis besar dan pembaca yang menilai mana yang masih berlaku.
+
+**2. SIGMET abu vulkanik.** SIGMET adalah peringatan resmi cuaca berbahaya untuk
 penerbangan. Yang berjenis `VA` berarti awan abu vulkanik **teramati** di suatu wilayah
 udara, lengkap dengan batas areanya, ketinggiannya, arah dan kecepatan geraknya, serta
 masa berlakunya. Untuk Selat Sunda, penerbitnya kantor meteorologi penerbangan Jakarta
@@ -283,19 +299,19 @@ E10541 SFC/FL070 MOV SW 15KT NC=
 Teks mentah itu ikut ditampilkan di balik lipatan "Teks aslinya", supaya siapa pun bisa
 membacanya sendiri, bukan cuma menerima terjemahannya.
 
-**2. METAR tiap bandara.** METAR adalah laporan cuaca yang ditulis stasiun meteorologi di
+**3. METAR tiap bandara.** METAR adalah laporan cuaca yang ditulis stasiun meteorologi di
 bandara itu sendiri, tiap 30 menit. Yang dibaca dari sana: sandi cuaca (`VA` = abu
 vulkanik, `HZ` = kabut asap, `BR` = kabut tipis, `FU` = asap) dan jarak pandang.
 
-Keduanya ditarik dari [Aviation Weather Center](https://aviationweather.gov) (NOAA/NWS),
-yang menyalurkan ulang pertukaran OPMET dunia. Isinya tetap terbitan Indonesia — nama
-penerbitnya ada di dalam teks mentah masing-masing.
+Lapis 2 dan 3 ditarik dari [Aviation Weather Center](https://aviationweather.gov)
+(NOAA/NWS), yang menyalurkan ulang pertukaran OPMET dunia. Isinya tetap terbitan
+Indonesia — nama penerbitnya ada di dalam teks mentah masing-masing.
 
-### Yang sengaja tidak dilakukan: menyatakan bandara buka atau tutup
+### Kenapa lewat pemberitaan, bukan langsung dari sumbernya
 
-Keputusan menutup bandara diumumkan lewat **NOTAM**, diterbitkan AirNav Indonesia dan
-diteruskan maskapai. Tidak ada saluran NOTAM Indonesia yang bisa dibaca gratis tanpa
-kunci. Ini sudah dicoba satu per satu:
+Keputusan menutup bandara diumumkan lewat **NOTAM**, diterbitkan AirNav Indonesia. Semua
+jalur langsung ke sumbernya sudah dicoba satu per satu, dan hasilnya dicatat di sini
+supaya tidak perlu ditebak lagi:
 
 | Yang dicoba | Hasil |
 |---|---|
@@ -305,12 +321,17 @@ kunci. Ini sudah dicoba satu per satu:
 | `aim.dephub.go.id`, `notam.airnavindonesia.co.id` | nama host tidak beralamat |
 | `api.autorouter.aero` | `401` — butuh OAuth |
 | `aviation.bmkg.go.id` | `403` |
+| **`injourneyairports.id`** (pengelola bandara) | situsnya SPA; API-nya di `api.injourneyairports.id` membalas halaman **"We're currently performing maintenance"** |
+| **`cms.injourneyairports.id`** | halaman masuk CMS, bukan data publik |
+| **Akun X `@djpu151`, `@AirNavIndonesia`** | akunnya ada (dipastikan lewat FxTwitter), tapi linimasanya tidak terbaca: endpoint sematan X membalas `429`, dan ketiga instans Nitter membalas `302`/`403`/`429` — `rss.xcancel.com` menjawab "RSS reader not yet whitelisted!" |
+| Akun X `@Soetta_Airport` | `404` — tidak ada |
 
-Karena itu **halaman ini tidak pernah menulis kata "buka" atau "tutup" untuk sebuah
-bandara**, dan ada [uji otomatis](test.js) yang memastikan tidak ada label yang lolos
-menyiratkannya. Orang membatalkan atau meneruskan perjalanan berdasarkan kalimat seperti
-itu; menyimpulkannya dari cuaca akan jadi karangan. Yang ditulis di halaman adalah
-kalimat jujurnya, lengkap dengan tautan ke AirNav Indonesia dan InJourney Airports.
+Jadi jalur yang hidup adalah pemberitaan atas pengumuman resmi, dan itu yang dipakai.
+Konsekuensinya ditulis terus terang di halaman: ini dibaca **lewat media, bukan langsung
+dari sumbernya**, jadi bisa tertinggal beberapa menit. Halaman juga tetap tidak pernah
+*menyimpulkan* sendiri sebuah bandara buka atau tutup — ada
+[uji otomatis](test.js) yang memastikan tidak ada label yang lolos menyiratkannya. Orang
+membatalkan atau meneruskan perjalanan berdasarkan kalimat seperti itu.
 
 ### Aturan status
 
@@ -452,14 +473,14 @@ src/
     publik.js          Google News RSS, X (temu lewat sematan/Nitter, lengkapi lewat FxTwitter), Threads
     penerbangan.js     SIGMET abu & METAR bandara (NOAA AWC) — tanpa NOTAM, dan tahu diri soal itu
 config/
-  config.json          gunung yang dipantau, daftar kota, bandara, FIR, interval, sumber X
+  config.json          gunung yang dipantau, daftar kota, bandara + alias, FIR, interval, sumber X
   ambang.json          titik patah ISPU, level PVMBG, teks tindakan — semua bersitasi
 public/
   index.html           satu halaman, tanpa langkah build
   gaya.css             token Flavida + palet status
   app.js               peta SVG, kompas angin, grafik — vanilla, tanpa kerangka kerja
   coastline.json       garis pantai Selat Sunda, 7 KB (Natural Earth 10m, disederhanakan)
-test.js                38 pemeriksaan mandiri, tanpa framework
+test.js                40 pemeriksaan mandiri, tanpa framework
 scripts/
   tangkap.mjs          tangkapan layar README lewat CDP (alat pengembangan)
   garis-pantai.mjs     buat ulang coastline.json dari Natural Earth (sekali jalan)
@@ -749,9 +770,10 @@ ulang. Orang memeriksa status gunung jam dua pagi.
   Google News RSS yang paling andal saat ini dan itulah yang mengisi kanal perbincangan.
 - **Gambar unggahan X dimuat dari CDN Twitter**, jadi peramban pembaca menghubungi
   `pbs.twimg.com`. Dikirim dengan `referrerpolicy="no-referrer"`.
-- **Status buka/tutup bandara tidak tersedia.** Itu berjalan lewat NOTAM dan tidak ada
-  saluran gratisnya; lihat tabel percobaannya di atas. Yang ada hanya peringatan abu
-  penerbangan dan laporan cuaca bandara.
+- **Status buka/tutup bandara dibaca lewat pemberitaan, bukan dari sumbernya.** NOTAM
+  tidak punya saluran gratis dan API pengelola bandara sedang mati; lihat tabel
+  percobaannya di atas. Artinya kabar di halaman bisa tertinggal beberapa menit dari
+  pengumuman aslinya, dan halaman tidak pernah menyimpulkan sendiri buka atau tutup.
 - **Tidak ada notifikasi.** Halaman ini harus dibuka. Push, SMS, dan siaran WhatsApp adalah
   langkah berikutnya, dan itu yang paling menolong orang yang tidak punya media sosial.
 

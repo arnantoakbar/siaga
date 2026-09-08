@@ -33,10 +33,18 @@ function uraiRss(xml, batas = 30) {
       const tautan = isi(it, 'link') || (it.match(/<link[^>]*href="([^"]+)"/i) || [])[1] || '';
       const waktu = isi(it, 'pubDate') || isi(it, 'published') || isi(it, 'updated');
       const ms = Date.parse(waktu);
+      // Google News menempelkan " - Nama Penerbit" di ujung tiap judul, padahal
+      // penerbitnya sudah dikirim terpisah di <source> dan ditampilkan sendiri.
+      // Dibuang HANYA kalau ekornya sama persis dengan <source>, jadi judul yang
+      // memang berakhiran tanda hubung tidak ikut terpotong.
+      const sumber = isi(it, 'source') || isi(it, 'dc:creator') || null;
+      let judul = isi(it, 'title');
+      if (sumber && judul.endsWith(` - ${sumber}`)) judul = judul.slice(0, -(sumber.length + 3)).trim();
+
       return {
-        judul: isi(it, 'title'),
+        judul,
         tautan,
-        sumber: isi(it, 'source') || isi(it, 'dc:creator') || null,
+        sumber,
         waktu: Number.isFinite(ms) ? new Date(ms).toISOString() : null,
         ringkas: isi(it, 'description').slice(0, 300),
         gambar: gambarItem(it),

@@ -135,7 +135,7 @@ function gambarTampilanAktif(ulang = false) {
     gambarDampak();
     gambarTindakan();
     gambarBandara();
-    if ($('#udara-wadah').closest('details').open) gambarUdara();
+    gambarUdara();
   } else if (tampilan === 'sumber') {
     gambarKabar();
     gambarSumber();
@@ -415,7 +415,7 @@ function gantiKota() {
   if ($('#tabel-kota').firstElementChild) gambarTabelKota();
   gambarDampak();
   gambarTindakan();
-  if ($('#udara-wadah').closest('details').open) gambarUdara();
+  gambarUdara();
 }
 
 function gambarRingkasLokasi() {
@@ -554,6 +554,19 @@ function kartuSigmet(s) {
     </div></div>`;
 }
 
+/**
+ * Satu judul berita, apa adanya.
+ *
+ * Judulnya TIDAK diringkas dan TIDAK ditafsirkan jadi lencana buka/tutup. Status
+ * bandara berubah beberapa kali sehari — "ditutup sampai pukul 10.00" dan "kembali
+ * beroperasi" bisa terbit berjarak dua jam. Karena itu jamnya ditulis mencolok dan
+ * pembaca yang menilai sendiri mana yang masih berlaku.
+ */
+const butirKabar = (k) => `<li>
+    <a href="${aman(k.tautan)}" target="_blank" rel="noopener">${aman(k.judul)}</a>
+    <small>${aman(k.sumber || 'sumber tidak tertulis')} · ${jamWib(k.waktu)} · ${lalu(k.waktu)}</small>
+  </li>`;
+
 function kartuBandara(b) {
   const m = b.metar;
   const rinci = [pandangTeks(m?.pandang), ...(m?.cuaca || [])].filter(Boolean);
@@ -569,6 +582,7 @@ function kartuBandara(b) {
       <small class="bandara-kaki">${
         m?.waktu ? `Laporan ${jamWib(m.waktu)}` : 'Belum ada laporan terbaru'
       } · <a href="https://aviationweather.gov/data/metar/?id=${aman(b.icao)}" target="_blank" rel="noopener">METAR ${aman(b.icao)}</a></small>
+      ${b.kabar?.length ? `<ul class="bandara-kabar">${b.kabar.map(butirKabar).join('')}</ul>` : ''}
     </li>`;
 }
 
@@ -592,14 +606,28 @@ function gambarBandara() {
       </div></div>`);
   else bagian.push(...sig.map(kartuSigmet));
 
+  const kabar = D.kabarBandara || [];
+  if (D.kabarBandaraGagal)
+    bagian.push(`<div class="tindakan-utama st-waspada">${ikon('info')}<div>
+        <p>Kabar penutupan dan pembukaan bandara gagal diambil pada pembaruan terakhir.</p>
+        <small>Kosongnya bagian ini bukan berarti semua bandara beroperasi normal.</small>
+      </div></div>`);
+  else if (kabar.length)
+    bagian.push(`<div class="kabar-bandara">
+        <h4>Kabar penutupan &amp; pembukaan</h4>
+        <p class="kabar-bandara-sub">Pengumuman resmi AirNav Indonesia dan Kemenhub seperti diberitakan media.
+          <b>Perhatikan jamnya</b> — status bandara bisa berubah beberapa kali dalam sehari.</p>
+        <ul class="bandara-kabar">${kabar.map(butirKabar).join('')}</ul>
+      </div>`);
+
   if (daftar.length) bagian.push(`<ul class="bandara-petak">${daftar.map(kartuBandara).join('')}</ul>`);
 
   bagian.push(`<div class="cap bandara-catatan">${ikon('info')}<div>
-      <b>Halaman ini tidak bisa memastikan bandara buka atau tutup.</b>
-      Pengumuman itu keluar sebagai NOTAM dari AirNav Indonesia dan diteruskan maskapai;
-      salurannya tidak terbuka gratis, jadi tidak ada di sini. Yang di atas adalah peringatan
-      abu penerbangan dan laporan cuaca yang ditulis tiap bandara sendiri setiap 30 menit.
-      Untuk jadwal penerbanganmu, tanya maskapai.
+      <b>Lencana hijau di atas bukan berarti bandaranya buka.</b>
+      Ia cuma bilang tidak ada abu di laporan cuaca bandara itu. Keputusan buka atau tutup
+      diumumkan lewat NOTAM oleh AirNav Indonesia; salurannya tidak terbuka gratis, jadi
+      halaman ini membacanya lewat pemberitaan — bukan langsung dari sumbernya, dan bisa
+      tertinggal. Untuk jadwal penerbanganmu, tanya maskapai.
       <span class="bandara-tautan">
         <a class="tautan-sumber" href="https://www.airnavindonesia.co.id/" target="_blank" rel="noopener">${ikon('tautan')}AirNav Indonesia</a>
         <a class="tautan-sumber" href="https://injourneyairports.id/" target="_blank" rel="noopener">${ikon('tautan')}InJourney Airports</a>
@@ -1256,7 +1284,6 @@ for (const id of ['tab-semua', 'tab-resmi', 'tab-publik'])
   };
 // Grafik di dalam lipatan baru punya ukuran setelah lipatannya dibuka.
 $('#angin-wadah').closest('details').addEventListener('toggle', (e) => e.target.open && D && gambarAngin());
-$('#udara-wadah').closest('details').addEventListener('toggle', (e) => e.target.open && D && gambarUdara());
 
 terapkanTema();
 pindahTab(location.hash.slice(1) || 'situasi', false);

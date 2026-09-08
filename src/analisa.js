@@ -250,7 +250,7 @@ export function didalamPoligon(lat, lon, titik = []) {
  * TIDAK menaikkan status: jarak pandang 4 km berkabut asap adalah hari biasa di
  * Soekarno-Hatta dan bukan pertanda apa pun soal erupsi.
  */
-export function analisaBandara(bandara, gunung, metar, sigmet = []) {
+export function analisaBandara(bandara, gunung, metar, sigmet = [], kabar = []) {
   const jarak = Math.round(jarakKm(gunung.lat, gunung.lon, bandara.lat, bandara.lon));
   const didalam = sigmet.filter((s) => didalamPoligon(bandara.lat, bandara.lon, s.titik));
   const abuTeramati = /\bVA\b/.test(metar?.cuacaKode || '');
@@ -277,5 +277,22 @@ export function analisaBandara(bandara, gunung, metar, sigmet = []) {
     sumber = `METAR ${bandara.icao}`;
   }
 
-  return { ...bandara, jarakKm: jarak, status, label, dasar, sumber, metar: metar ?? null, sigmetNomor: didalam.map((s) => s.nomor) };
+  // Judul berita yang menyebut bandara ini namanya. Hanya dicocokkan dan ditautkan,
+  // TIDAK ditafsirkan: "3 Bandara Masih Ditutup hingga Pukul 10.00 WIB" kemarin dan
+  // "Soetta Kembali Beroperasi" hari ini bisa duduk berdampingan, dan pembacalah yang
+  // melihat jamnya. Menyaringnya jadi satu lencana buka/tutup berarti menebak.
+  const kunci = [...(bandara.alias || []), bandara.iata].filter(Boolean).map((k) => k.toLowerCase());
+  const kabarnya = kabar.filter((k) => {
+    const t = String(k.judul || '').toLowerCase();
+    return kunci.some((x) => t.includes(x));
+  });
+
+  return {
+    ...bandara, jarakKm: jarak, status, label, dasar, sumber,
+    metar: metar ?? null, sigmetNomor: didalam.map((s) => s.nomor),
+    // Satu judul saja, yang terbaru. Daftar penuhnya sudah ada di atas kartu, dan
+    // satu berita sering menyebut beberapa bandara sekaligus ("Soetta dan Halim
+    // kembali dibuka") — tanpa batas ini judul yang sama tampil tiga kali di satu layar.
+    kabar: kabarnya.slice(0, 1),
+  };
 }

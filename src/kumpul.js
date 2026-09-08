@@ -148,7 +148,7 @@ export async function kumpulkan(db) {
   const sTingkat = await coba(db, 'magma-tingkat-aktivitas', magma.tingkatAktivitas);
   const barisGunung = sTingkat.ok ? sTingkat.data.find((x) => x.gunung.toLowerCase() === g.nama.toLowerCase()) : null;
 
-  const [sLaporan, sHarian, sAngin, sUdara, sGempa, sSigmet, sMetar, publikHasil] = await Promise.all([
+  const [sLaporan, sHarian, sAngin, sUdara, sGempa, sSigmet, sMetar, sKabarUdara, publikHasil] = await Promise.all([
     barisGunung
       ? coba(db, 'magma-laporan', () => magma.laporan(barisGunung.laporanUrl))
       : { nama: 'magma-laporan', ok: false, pesan: 'tautan laporan tidak ditemukan', waktu: new Date().toISOString() },
@@ -158,6 +158,11 @@ export async function kumpulkan(db) {
     coba(db, 'bmkg-gempa', bmkg.gempa),
     coba(db, 'sigmet-abu', () => penerbangan.sigmetAbu(CONFIG.firPenerbangan || [])),
     coba(db, 'metar-bandara', () => penerbangan.metar((CONFIG.bandara || []).map((b) => b.icao))),
+    // Status resmi buka/tutup berjalan lewat NOTAM dan tidak terbuka gratis (lihat
+    // src/sumber/penerbangan.js). Yang tersisa: pemberitaan atas pengumuman AirNav
+    // dan Kemenhub. Ditarik terpisah dari kanal berita umum supaya tidak tenggelam —
+    // orang yang punya jadwal terbang butuh ini di atas, bukan di antara 40 kabar lain.
+    coba(db, 'berita-penerbangan', () => publik.berita(CONFIG.kunciBeritaPenerbangan)),
     kanalPublik(db),
   ]);
 
@@ -186,10 +191,13 @@ export async function kumpulkan(db) {
   // terlihat. Karena itu status bandara hanya dihitung kalau keduanya berhasil.
   const sigmet = sSigmet.ok ? sSigmet.data : null;
   const metarPer = new Map((sMetar.ok ? sMetar.data : []).map((m) => [m.icao, m]));
+  const kabarBandara = (sKabarUdara.ok ? sKabarUdara.data : [])
+    .filter((k) => k.waktu)
+    .sort((a, b) => b.waktu.localeCompare(a.waktu));
   const bandara =
     sSigmet.ok || sMetar.ok
       ? (CONFIG.bandara || [])
-          .map((b) => analisaBandara(b, g, metarPer.get(b.icao), sigmet ?? []))
+          .map((b) => analisaBandara(b, g, metarPer.get(b.icao), sigmet ?? [], kabarBandara))
           .sort((a, b) => a.jarakKm - b.jarakKm)
       : [];
 
@@ -204,7 +212,7 @@ export async function kumpulkan(db) {
     total: (l.kegempaan || []).reduce((a, x) => a + x.jumlah, 0),
   }));
 
-  const kesehatan = [sTingkat, sLaporan, sHarian, sAngin, sUdara, sGempa, sSigmet, sMetar, ...publikHasil.kesehatan].map(
+  const kesehatan = [sTingkat, sLaporan, sHarian, sAngin, sUdara, sGempa, sSigmet, sMetar, sKabarUdara, ...publikHasil.kesehatan].map(
     ({ data, ...s }) => s
   );
 
@@ -218,6 +226,8 @@ export async function kumpulkan(db) {
     angin,
     kota,
     bandara,
+    kabarBandara: kabarBandara.slice(0, 8),
+    kabarBandaraGagal: !sKabarUdara.ok,
     sigmet,
     sigmetGagal: !sSigmet.ok,
     tren,

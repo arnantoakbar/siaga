@@ -9,7 +9,7 @@
 <meta name="theme-color" content="#14110F" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="icon" href="ikon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="gaya.css?v=29">
+<link rel="stylesheet" href="gaya.css?v=32">
 <script>
   // Dijalankan sebelum halaman digambar supaya tema tidak berkedip saat dimuat.
   try {
@@ -243,6 +243,14 @@
       <h2 id="j-dampak">Artinya buat kamu</h2>
       <div id="kartu-dampak"><div class="rangka" style="height:190px"></div></div>
 
+
+      <h3 class="judul-blok">Kualitas udara 24 jam terakhir</h3>
+      <p class="sub" id="udara-sub">PM2.5 adalah partikel halus yang paling berbahaya untuk paru-paru.</p>
+      <div class="panel">
+        <div id="udara-wadah"><div class="rangka" style="height:220px"></div></div>
+        <p class="panel-kaki">Sumber: Open-Meteo CAMS. Keluaran model cuaca global beresolusi sekitar 40 km, bukan sensor pengukur di darat. Angka resmi ada di stasiun pemantau KLHK dan BMKG.</p>
+      </div>
+
       <h3 class="judul-blok">Yang perlu kamu lakukan</h3>
       <p class="sub">Ketuk kartu untuk melihat anjuran lengkapnya dan dari mana asalnya.</p>
       <div id="tindakan"></div>
@@ -251,15 +259,6 @@
       <p class="sub">Peringatan abu untuk penerbangan, dan kondisi yang dilaporkan tiap bandara sendiri.</p>
       <div id="bandara"><div class="rangka" style="height:230px"></div></div>
 
-      <details class="lipat"><summary>Kualitas udara 24 jam terakhir</summary>
-        <div class="lipat-isi">
-          <p class="sub" id="udara-sub">PM2.5 adalah partikel halus yang paling berbahaya untuk paru-paru.</p>
-          <div class="panel">
-            <div id="udara-wadah"><div class="rangka" style="height:220px"></div></div>
-            <p class="panel-kaki">Sumber: Open-Meteo CAMS. Keluaran model cuaca global beresolusi sekitar 40 km, bukan sensor pengukur di darat. Angka resmi ada di stasiun pemantau KLHK dan BMKG.</p>
-          </div>
-        </div>
-      </details>
     </div>
   </section>
 
@@ -342,6 +341,6 @@
   </div>
 </dialog>
 
-<script src="app.js?v=29" type="module"></script>
+<script src="app.js?v=32" type="module"></script>
 </body>
 </html>

@@ -177,7 +177,10 @@
       "kota": "Lampung Selatan",
       "provinsi": "Lampung",
       "lat": -5.2435,
-      "lon": 105.1795
+      "lon": 105.1795,
+      "alias": [
+        "radin inten"
+      ]
     },
     {
       "icao": "WIII",
@@ -186,7 +189,13 @@
       "kota": "Tangerang",
       "provinsi": "Banten",
       "lat": -6.1249,
-      "lon": 106.6534
+      "lon": 106.6534,
+      "alias": [
+        "soekarno-hatta",
+        "soekarno hatta",
+        "soetta",
+        "cengkareng"
+      ]
     },
     {
       "icao": "WIHH",
@@ -195,7 +204,10 @@
       "kota": "Jakarta Timur",
       "provinsi": "DKI Jakarta",
       "lat": -6.2675,
-      "lon": 106.8885
+      "lon": 106.8885,
+      "alias": [
+        "halim"
+      ]
     },
     {
       "icao": "WIPP",
@@ -204,12 +216,18 @@
       "kota": "Palembang",
       "provinsi": "Sumatera Selatan",
       "lat": -2.8993,
-      "lon": 104.702
+      "lon": 104.702,
+      "alias": [
+        "sultan mahmud badaruddin",
+        "smb ii"
+      ]
     }
   ],
-  "_bandara": "Bandara yang laporan cuacanya (METAR) benar-benar masuk ke pertukaran OPMET dunia dan bisa dibaca gratis. Sudah diperiksa satu per satu: Husein Sastranegara (WICC), Kertajati (WICA), dan Pondok Cabe (WIHP) TIDAK menerbitkan METAR ke sana, jadi sengaja tidak dimasukkan daripada tampil kosong terus. Koordinat dari basis data bandara Aviation Weather Center.",
+  "_bandara": "Bandara yang laporan cuacanya (METAR) benar-benar masuk ke pertukaran OPMET dunia dan bisa dibaca gratis. Sudah diperiksa satu per satu: Husein Sastranegara (WICC), Kertajati (WICA), dan Pondok Cabe (WIHP) TIDAK menerbitkan METAR ke sana, jadi sengaja tidak dimasukkan daripada tampil kosong terus. Koordinat dari basis data bandara Aviation Weather Center. `alias` dipakai untuk mencocokkan judul berita ke bandara ini; tulis yang khas saja (\"soetta\", \"halim\") dan jangan nama kotanya sendiri, karena \"Palembang\" muncul di berita apa pun tentang kota itu.",
   "firPenerbangan": [
     "WIIF"
   ],
-  "_firPenerbangan": "Wilayah informasi penerbangan yang SIGMET abunya diambil. WIIF = FIR Jakarta, mencakup Sumatera bagian selatan, Jawa bagian barat, dan Selat Sunda. FIR lain (mis. WAAF Ujung Pandang) memuat SIGMET gunung yang ribuan kilometer jauhnya dan tidak relevan di sini."
+  "_firPenerbangan": "Wilayah informasi penerbangan yang SIGMET abunya diambil. WIIF = FIR Jakarta, mencakup Sumatera bagian selatan, Jawa bagian barat, dan Selat Sunda. FIR lain (mis. WAAF Ujung Pandang) memuat SIGMET gunung yang ribuan kilometer jauhnya dan tidak relevan di sini.",
+  "kunciBeritaPenerbangan": "(bandara OR penerbangan) (krakatau OR \"abu vulkanik\")",
+  "_kunciBeritaPenerbangan": "Kueri Google News untuk kabar penutupan dan pembukaan bandara. Pengumuman resmi berjalan lewat NOTAM yang tidak terbuka gratis, jadi jalur yang tersisa adalah pemberitaan atas pengumuman AirNav Indonesia dan Kemenhub. Google News ikut mengindeks situs resmi (kemenhub.go.id, bmkg.go.id, presidenri.go.id), jadi sebagian hasilnya memang terbitan lembaga itu sendiri."
 }

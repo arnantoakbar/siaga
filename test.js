@@ -232,6 +232,23 @@ uji('tanpa METAR status tetap null, tidak dianggap aman', () => {
   assert.equal(a.status, null);
   assert.equal(a.metar, null);
 });
+uji('judul berita dicocokkan ke bandara lewat alias, bukan nama kotanya', () => {
+  const kabar = [
+    { judul: 'Bandara Soetta dan Halim Kembali Dibuka Usai Erupsi Krakatau', waktu: '2026-09-08T01:15:00Z' },
+    { judul: 'Banjir di Palembang Rendam Ratusan Rumah', waktu: '2026-09-08T01:00:00Z' },
+  ];
+  const cgk = analisaBandara({ ...bdr, alias: ['soetta', 'soekarno-hatta'] }, gunung, null, [], kabar);
+  assert.equal(cgk.kabar.length, 1);
+  const plm = analisaBandara(
+    { icao: 'WIPP', iata: 'PLM', nama: 'SMB II', kota: 'Palembang', lat: -2.9, lon: 104.7, alias: ['sultan mahmud badaruddin'] },
+    gunung, null, [], kabar
+  );
+  assert.deepEqual(plm.kabar, [], 'berita banjir Palembang tidak boleh nempel ke bandaranya');
+});
+uji('kartu bandara hanya membawa satu judul terbaru', () => {
+  const kabar = [1, 2, 3, 4].map((n) => ({ judul: `Soetta kabar ${n}`, waktu: `2026-09-08T0${n}:00:00Z` }));
+  assert.equal(analisaBandara({ ...bdr, alias: ['soetta'] }, gunung, null, [], kabar).kabar.length, 1);
+});
 uji('tidak ada label yang menyatakan bandara buka atau tutup', () => {
   for (const m of [{ cuacaKode: 'VA' }, { cuacaKode: 'HZ' }, undefined])
     for (const s of [[], sig]) {
