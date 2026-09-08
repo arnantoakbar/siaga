@@ -405,6 +405,11 @@ main > section > .wadah > h2 { font-size: clamp(24px, 6vw, 32px); margin-bottom:
   padding: 15px 16px; border-radius: var(--r-kecil); margin-bottom: 12px;
 }
 .tindakan-utama svg { width: 21px; height: 21px; flex: none; margin-top: 1px; }
+/* Anak flex punya min-width: auto, jadi isi yang tidak bisa dipenggal (teks SIGMET
+   mentah di dalam <pre>) memaksa lebarnya melebihi wadah dan membuat SELURUH halaman
+   bisa digulir mendatar. Dengan min-width: 0 ia boleh menyusut, dan <pre>-nya yang
+   menggulir sendiri. */
+.tindakan-utama > div { min-width: 0; }
 .tindakan-utama p { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 500; }
 .tindakan-utama small { display: block; margin-top: 6px; font-size: 12px; opacity: 0.8; }
 
@@ -745,3 +750,43 @@ table.data tr[data-pilih='true'] td:first-child { box-shadow: inset 3px 0 0 var(
   .petak { grid-template-columns: repeat(2, 1fr); }
   .tab-u span { font-size: 10px; }
 }
+
+/* ── bandara & penerbangan ───────────────────────────────────────────────── */
+.sigmet-asli { margin-top: 9px; }
+.sigmet-asli > summary {
+  cursor: pointer; list-style: none; font-size: 12px; font-weight: 600;
+  opacity: 0.85; text-decoration: underline; text-underline-offset: 3px;
+}
+.sigmet-asli > summary::-webkit-details-marker { display: none; }
+/* Teks SIGMET adalah singkatan penerbangan baku dengan pemenggalan baris yang
+   berarti — dibiarkan apa adanya, hanya boleh digulir mendatar kalau kepanjangan. */
+.sigmet-asli pre {
+  margin: 8px 0 0; padding: 10px 12px; border-radius: var(--r-kecil);
+  background: var(--bg-2); overflow-x: auto;
+  font: 500 11.5px/1.55 ui-monospace, 'SF Mono', Menlo, monospace;
+  white-space: pre; -webkit-overflow-scrolling: touch;
+}
+
+.bandara-petak {
+  list-style: none; margin: 14px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;
+}
+.bandara-sel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-kecil); padding: 13px 15px;
+}
+.bandara-atas { display: flex; align-items: center; gap: 8px; }
+.bandara-atas b { font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; }
+.bandara-kode {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--ink-3);
+  border: 1px solid var(--line-kuat); border-radius: 4px; padding: 1px 5px; flex: none;
+}
+.bandara-tempat { margin: 3px 0 9px; font-size: 12.5px; color: var(--ink-3); }
+.bandara-cuaca { margin: 9px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.bandara-kaki { display: block; margin-top: 8px; font-size: 11.5px; color: var(--ink-3); }
+.bandara-kaki a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.bandara-kaki a:hover { color: var(--accent); }
+.lencana-sepi { background: var(--bg-2); color: var(--ink-3); }
+
+.bandara-catatan { margin-top: 16px; }
+.bandara-tautan { display: flex; flex-wrap: wrap; gap: 16px; }

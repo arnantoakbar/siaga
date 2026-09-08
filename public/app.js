@@ -134,6 +134,7 @@ function gambarTampilanAktif(ulang = false) {
   } else if (tampilan === 'dampak') {
     gambarDampak();
     gambarTindakan();
+    gambarBandara();
     if ($('#udara-wadah').closest('details').open) gambarUdara();
   } else if (tampilan === 'sumber') {
     gambarKabar();
@@ -503,6 +504,109 @@ function gambarTindakan() {
     };
   if (tindakanTerbuka != null && tindakanTerbuka < sisa.length) tampilkan();
   else tindakanTerbuka = null;
+}
+
+// ── bandara & penerbangan ─────────────────────────────────────────────────
+// Satu aturan yang memegang seluruh blok ini: JANGAN PERNAH menulis bandara
+// "buka" atau "tutup". Keputusan itu diumumkan lewat NOTAM oleh AirNav Indonesia,
+// dan layanan ini tidak punya aksesnya (alasan lengkapnya di src/sumber/penerbangan.js).
+// Orang membatalkan perjalanan berdasarkan kalimat seperti itu, jadi yang ditulis
+// hanya dua hal yang memang diamati: peringatan abu penerbangan dari BMKG, dan
+// laporan cuaca yang ditulis bandaranya sendiri.
+
+const KAKI_KE_KM = 0.0003048;
+const KNOT_KE_KMJ = 1.852;
+
+// Nama diri yang datang HURUF BESAR SEMUA dari sumbernya (KRAKATAU, JAKARTA).
+const kapital = (s) => String(s || '').toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+// Awal kalimat saja. Jangan pakai kapital() untuk kalimat: "jarak pandang 3 km"
+// berubah jadi "Jarak Pandang 3 Km", dan satuan km tidak pernah ditulis besar.
+const awalBesar = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+const angkaId = (n) => Number(n).toLocaleString('id-ID');
+
+/** Jarak pandang METAR (meter) jadi potongan kalimat. */
+function pandangTeks(p) {
+  if (!p) return null;
+  if (p.atauLebih) return 'jarak pandang 10 km atau lebih';
+  return p.meter >= 1000 ? `jarak pandang ${angkaId(p.meter / 1000)} km` : `jarak pandang ${p.meter} m`;
+}
+
+function kartuSigmet(s) {
+  const wilayah = kapital(String(s.firNama || s.fir).replace(/^W\w{3}\s+/, '')) || s.fir;
+  const rinci = [];
+  if (s.puncakKaki != null)
+    rinci.push(
+      `abu terpantau dari permukaan sampai ${angkaId(s.puncakKaki)} kaki (sekitar ${angkaId(
+        Math.round(s.puncakKaki * KAKI_KE_KM * 10) / 10
+      )} km)`
+    );
+  if (s.arahTeks && s.kecepatanKnot)
+    rinci.push(`bergerak ke ${s.arahTeks} sekitar ${Math.round(s.kecepatanKnot * KNOT_KE_KMJ)} km/jam`);
+
+  return `<div class="tindakan-utama st-siaga">${ikon('pesawat')}<div>
+      <p>Ada peringatan abu vulkanik untuk penerbangan${
+        s.gunung ? ` dari ${aman(kapital(s.gunung))}` : ''
+      } di wilayah udara ${aman(wilayah)}${rinci.length ? `. ${aman(awalBesar(rinci.join(', ')))}` : ''}.</p>
+      <small>SIGMET ${aman(s.nomor)} ${aman(s.fir)}, terbitan kantor meteorologi penerbangan${
+        s.sampai ? ` · berlaku sampai ${jamWib(s.sampai)}` : ''
+      }</small>
+      ${s.teksAsli ? `<details class="sigmet-asli"><summary>Teks aslinya</summary><pre>${aman(s.teksAsli)}</pre></details>` : ''}
+    </div></div>`;
+}
+
+function kartuBandara(b) {
+  const m = b.metar;
+  const rinci = [pandangTeks(m?.pandang), ...(m?.cuaca || [])].filter(Boolean);
+  const warna = b.status ? `var(--h-${b.status})` : 'var(--ink-3)';
+  return `<li class="bandara-sel">
+      <div class="bandara-atas">
+        <span class="titik-st" style="background:${warna}"></span>
+        <b>${aman(b.nama)}</b><span class="bandara-kode">${aman(b.iata)}</span>
+      </div>
+      <p class="bandara-tempat">${aman(b.kota)} · ${b.jarakKm} km dari kawah</p>
+      ${b.status ? lencana(b.status, b.label) : `<span class="lencana lencana-sepi">${ikon('jam')}${aman(b.label)}</span>`}
+      ${rinci.length ? `<p class="bandara-cuaca">${aman(awalBesar(rinci.join(', ')))}.</p>` : ''}
+      <small class="bandara-kaki">${
+        m?.waktu ? `Laporan ${jamWib(m.waktu)}` : 'Belum ada laporan terbaru'
+      } · <a href="https://aviationweather.gov/data/metar/?id=${aman(b.icao)}" target="_blank" rel="noopener">METAR ${aman(b.icao)}</a></small>
+    </li>`;
+}
+
+function gambarBandara() {
+  const wadah = $('#bandara');
+  const daftar = D.bandara || [];
+  const sig = D.sigmet || [];
+  const bagian = [];
+
+  // Gagal ambil dan "tidak ada peringatan" adalah dua hal berbeda. Menyamakannya
+  // berarti menyajikan kesenyapan sebagai kabar baik, dan itu yang paling berbahaya.
+  if (D.sigmetGagal)
+    bagian.push(`<div class="tindakan-utama st-waspada">${ikon('info')}<div>
+        <p>Peringatan abu untuk penerbangan gagal diambil pada pembaruan terakhir.</p>
+        <small>Kosongnya bagian ini bukan berarti tidak ada peringatan.</small>
+      </div></div>`);
+  else if (!sig.length)
+    bagian.push(`<div class="tindakan-utama st-aman">${ikon('cek')}<div>
+        <p>Tidak ada peringatan abu vulkanik yang sedang berlaku untuk wilayah udara Jakarta.</p>
+        <small>Diperiksa ${lalu(D.dibuat)}</small>
+      </div></div>`);
+  else bagian.push(...sig.map(kartuSigmet));
+
+  if (daftar.length) bagian.push(`<ul class="bandara-petak">${daftar.map(kartuBandara).join('')}</ul>`);
+
+  bagian.push(`<div class="cap bandara-catatan">${ikon('info')}<div>
+      <b>Halaman ini tidak bisa memastikan bandara buka atau tutup.</b>
+      Pengumuman itu keluar sebagai NOTAM dari AirNav Indonesia dan diteruskan maskapai;
+      salurannya tidak terbuka gratis, jadi tidak ada di sini. Yang di atas adalah peringatan
+      abu penerbangan dan laporan cuaca yang ditulis tiap bandara sendiri setiap 30 menit.
+      Untuk jadwal penerbanganmu, tanya maskapai.
+      <span class="bandara-tautan">
+        <a class="tautan-sumber" href="https://www.airnavindonesia.co.id/" target="_blank" rel="noopener">${ikon('tautan')}AirNav Indonesia</a>
+        <a class="tautan-sumber" href="https://injourneyairports.id/" target="_blank" rel="noopener">${ikon('tautan')}InJourney Airports</a>
+      </span>
+    </div></div>`);
+
+  wadah.innerHTML = bagian.join('');
 }
 
 // ── lokasi perangkat ──────────────────────────────────────────────────────

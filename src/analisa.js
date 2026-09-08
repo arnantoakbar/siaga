@@ -219,3 +219,63 @@ export function ringkasGunung(barisGunung, laporan, harian, angin, ambang) {
     ringkasHarian: harian?.visual ?? null,
   };
 }
+
+/**
+ * Titik di dalam poligon (algoritma lemparan sinar).
+ * Dipakai untuk menguji bandara mana yang berada di dalam area peringatan abu SIGMET.
+ * Poligon SIGMET selalu kecil dan jauh dari kutub maupun antimeridian, jadi
+ * bujur-lintang datar sudah cukup dan tidak perlu proyeksi.
+ */
+export function didalamPoligon(lat, lon, titik = []) {
+  if (titik.length < 3) return false;
+  let di = false;
+  for (let i = 0, j = titik.length - 1; i < titik.length; j = i++) {
+    const yi = titik[i].lat, xi = titik[i].lon;
+    const yj = titik[j].lat, xj = titik[j].lon;
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) di = !di;
+  }
+  return di;
+}
+
+/**
+ * Analisa satu bandara.
+ *
+ * Yang sengaja TIDAK dihitung di sini: buka atau tutupnya bandara. Keputusan itu
+ * diumumkan lewat NOTAM oleh AirNav Indonesia, dan layanan ini tidak punya akses
+ * ke NOTAM (lihat catatan di src/sumber/penerbangan.js). Menyimpulkan "tutup" dari
+ * cuaca akan jadi karangan, dan orang bisa membatalkan perjalanan karenanya.
+ *
+ * Status di bawah hanya soal abu, karena itu satu-satunya hal yang benar-benar
+ * teramati. Jarak pandang dan cuaca ikut ditampilkan sebagai keterangan, tapi
+ * TIDAK menaikkan status: jarak pandang 4 km berkabut asap adalah hari biasa di
+ * Soekarno-Hatta dan bukan pertanda apa pun soal erupsi.
+ */
+export function analisaBandara(bandara, gunung, metar, sigmet = []) {
+  const jarak = Math.round(jarakKm(gunung.lat, gunung.lon, bandara.lat, bandara.lon));
+  const didalam = sigmet.filter((s) => didalamPoligon(bandara.lat, bandara.lon, s.titik));
+  const abuTeramati = /\bVA\b/.test(metar?.cuacaKode || '');
+
+  let status = null;
+  let label = 'Laporan cuaca belum masuk';
+  let dasar = 'Tidak ada METAR terbaru dari bandara ini.';
+  let sumber = null;
+
+  if (abuTeramati) {
+    status = 'bahaya';
+    label = 'Abu teramati';
+    dasar = 'Laporan cuaca bandara mencantumkan sandi VA (abu vulkanik).';
+    sumber = `METAR ${bandara.icao}`;
+  } else if (didalam.length) {
+    status = 'siaga';
+    label = 'Di area peringatan abu';
+    dasar = `Titik bandara berada di dalam area SIGMET abu nomor ${didalam.map((s) => s.nomor).join(', ')}.`;
+    sumber = `SIGMET ${didalam[0].fir}`;
+  } else if (metar) {
+    status = 'aman';
+    label = 'Tidak ada abu dilaporkan';
+    dasar = 'Laporan cuaca terakhir bandara ini tidak menyebut abu vulkanik, dan titiknya di luar area peringatan abu yang berlaku.';
+    sumber = `METAR ${bandara.icao}`;
+  }
+
+  return { ...bandara, jarakKm: jarak, status, label, dasar, sumber, metar: metar ?? null, sigmetNomor: didalam.map((s) => s.nomor) };
+}

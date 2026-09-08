@@ -24,7 +24,7 @@ menjadi sekitar 1.700–1.900 piksel per tampilan.
 |---|---|---|
 | **Situasi** | Apa yang sedang terjadi di gunungnya? | Level dan rekomendasi PVMBG, kamera pemantau, kegempaan |
 | **Lokasimu** | Di mana aku, dan ke mana abunya? | Pemilih kota atau lokasi perangkat, peta sebaran, angin per ketinggian |
-| **Dampak** | Artinya apa buat aku? | Status kota, ISPU, infografis tindakan, kualitas udara 24 jam |
+| **Dampak** | Artinya apa buat aku? | Status kota, ISPU, infografis tindakan, bandara sekitar, kualitas udara 24 jam |
 | **Sumber** | Dari mana angka ini? | Kabar resmi vs perbincangan, kesehatan tiap sumber, cara perhitungan |
 
 Navigasinya di **bawah layar pada ponsel** supaya terjangkau jempol, dan pindah ke atas
@@ -45,6 +45,14 @@ bawaan peramban, jadi Esc, jebakan fokus, dan lapisan gelapnya datang gratis.
 | Dampak | Infografis tindakan | Cara pakai |
 |---|---|---|
 | ![Dampak](docs/04-dampak-mobile.png) | ![Tindakan](docs/05-tindakan-mobile.png) | ![Bantuan](docs/11-bantuan-mobile.png) |
+
+**Bandara di sekitar.** Peringatan abu untuk penerbangan (SIGMET) dan kondisi yang
+dilaporkan tiap bandara sendiri. Blok ini tidak pernah menulis "buka" atau "tutup" —
+alasannya di [bawah](#bandara--penerbangan).
+
+| Gelap | Terang |
+|---|---|
+| ![Bandara](docs/15-bandara-mobile.png) | ![Bandara terang](docs/16-bandara-terang.png) |
 
 **Linimasa sumber.** Satu aliran kronologis, terbaru di atas, dengan gambar sampul dari
 umpan penerbit. Tiap butir membawa lencana asalnya: **Resmi** kalau datang dari akun
@@ -93,6 +101,9 @@ Semua ditarik di sisi server tiap 10 menit. Tidak ada satu pun yang butuh kunci 
 | **X** — pencarian kata kunci lewat Nitter | **Menemukan** unggahan warga | RSS instans Nitter | ⚠️ perlu whitelist, lihat di bawah |
 | **X** — [FxTwitter](https://github.com/FixTweet/FxTwitter) | **Melengkapi** tiap unggahan: teks penuh, foto, video, metrik | `api.fxtwitter.com` | ✅ jalan, tanpa kunci |
 | **Threads** | Unggahan warga | Threads Graph API | ❌ perlu App Review Meta — [panduan token](docs/threads.md) |
+| **NOAA Aviation Weather Center** — [`isigmet`](https://aviationweather.gov/api/data/isigmet?format=raw) | SIGMET abu vulkanik FIR Jakarta — peringatan resmi untuk penerbangan | JSON publik | ✅ jalan |
+| **NOAA Aviation Weather Center** — [`metar`](https://aviationweather.gov/api/data/metar?ids=WIII&format=raw) | Kondisi teramati di tiap bandara: abu, jarak pandang, cuaca | JSON publik | ✅ jalan |
+| **NOTAM** — pengumuman resmi bandara ditutup | Status buka/tutup bandara | — | ❌ tidak ada saluran gratis, lihat di bawah |
 | **Windy** (opsional, atas persetujuan pembaca) | Lapisan angin / PM2.5 / aerosol di peta | iframe `embed.windy.com` | ✅ jalan |
 
 Yang gagal **tidak disembunyikan**. Bagian "Dari mana datanya" di halaman menampilkan
@@ -247,6 +258,111 @@ ditembus — yang dibaca persis gambar yang MAGMA tampilkan sendiri.
 
 ---
 
+## Bandara & penerbangan
+
+Pertanyaan yang muncul begitu abu naik: *penerbangan saya jadi atau tidak?* Blok ini di
+tab **Dampak** menjawab sejauh yang benar-benar bisa dijawab dari data terbuka — tidak
+lebih.
+
+**Yang ditampilkan ada dua lapis.**
+
+**1. SIGMET abu vulkanik.** SIGMET adalah peringatan resmi cuaca berbahaya untuk
+penerbangan. Yang berjenis `VA` berarti awan abu vulkanik **teramati** di suatu wilayah
+udara, lengkap dengan batas areanya, ketinggiannya, arah dan kecepatan geraknya, serta
+masa berlakunya. Untuk Selat Sunda, penerbitnya kantor meteorologi penerbangan Jakarta
+(berkode `WIII`) untuk FIR Jakarta (`WIIF`). Contoh yang tampil saat README ini ditulis:
+
+```
+WVID20 WIII 072330
+WIIF SIGMET 13 VALID 072330/080530 WIII- WIIF JAKARTA FIR VA ERUPTION
+MT KRAKATAU PSN S0606 E10525 VA CLD OBS AT 2310Z WI S0600 E10541 -
+S0832 E10519 - S0820 E10341 - S0630 E10259 - S0545 E10524 - S0600
+E10541 SFC/FL070 MOV SW 15KT NC=
+```
+
+Teks mentah itu ikut ditampilkan di balik lipatan "Teks aslinya", supaya siapa pun bisa
+membacanya sendiri, bukan cuma menerima terjemahannya.
+
+**2. METAR tiap bandara.** METAR adalah laporan cuaca yang ditulis stasiun meteorologi di
+bandara itu sendiri, tiap 30 menit. Yang dibaca dari sana: sandi cuaca (`VA` = abu
+vulkanik, `HZ` = kabut asap, `BR` = kabut tipis, `FU` = asap) dan jarak pandang.
+
+Keduanya ditarik dari [Aviation Weather Center](https://aviationweather.gov) (NOAA/NWS),
+yang menyalurkan ulang pertukaran OPMET dunia. Isinya tetap terbitan Indonesia — nama
+penerbitnya ada di dalam teks mentah masing-masing.
+
+### Yang sengaja tidak dilakukan: menyatakan bandara buka atau tutup
+
+Keputusan menutup bandara diumumkan lewat **NOTAM**, diterbitkan AirNav Indonesia dan
+diteruskan maskapai. Tidak ada saluran NOTAM Indonesia yang bisa dibaca gratis tanpa
+kunci. Ini sudah dicoba satu per satu:
+
+| Yang dicoba | Hasil |
+|---|---|
+| `external-api.faa.gov/notamapi` | `401 Unauthorized` — butuh kunci FAA |
+| `notams.aim.faa.gov/notamSearch` | `403 Access Denied` |
+| `www.notams.faa.gov` (DINS) | nama host tidak beralamat |
+| `aim.dephub.go.id`, `notam.airnavindonesia.co.id` | nama host tidak beralamat |
+| `api.autorouter.aero` | `401` — butuh OAuth |
+| `aviation.bmkg.go.id` | `403` |
+
+Karena itu **halaman ini tidak pernah menulis kata "buka" atau "tutup" untuk sebuah
+bandara**, dan ada [uji otomatis](test.js) yang memastikan tidak ada label yang lolos
+menyiratkannya. Orang membatalkan atau meneruskan perjalanan berdasarkan kalimat seperti
+itu; menyimpulkannya dari cuaca akan jadi karangan. Yang ditulis di halaman adalah
+kalimat jujurnya, lengkap dengan tautan ke AirNav Indonesia dan InJourney Airports.
+
+### Aturan status
+
+Hanya soal abu, karena hanya itu yang benar-benar teramati:
+
+| Kondisi | Status | Label |
+|---|---|---|
+| Sandi `VA` ada di METAR bandara | bahaya | Abu teramati |
+| Titik bandara di dalam poligon SIGMET abu yang berlaku | siaga | Di area peringatan abu |
+| Ada METAR, tidak keduanya | aman | Tidak ada abu dilaporkan |
+| METAR tidak masuk | *null* | Laporan cuaca belum masuk |
+
+Uji "di dalam area" memakai algoritma lemparan sinar terhadap poligon SIGMET
+(`didalamPoligon` di `src/analisa.js`). Poligon SIGMET selalu kecil dan jauh dari kutub
+maupun antimeridian, jadi bujur-lintang datar sudah cukup.
+
+**Jarak pandang sengaja TIDAK menaikkan status.** Ia ditampilkan sebagai keterangan saja.
+Soekarno-Hatta rutin melaporkan jarak pandang 4 km berkabut asap pada pagi hari biasa;
+menandainya "waspada" berarti membunyikan alarm untuk cuaca Jakarta sehari-hari, dan
+alarm yang selalu berbunyi berhenti dibaca.
+
+**SIGMET yang gagal diambil ≠ tidak ada peringatan.** Kalau pengambilannya gagal, blok ini
+mengatakan gagal. Kesenyapan tidak pernah disajikan sebagai kabar baik.
+
+### Bandara mana, dan kenapa cuma empat
+
+`config/config.json` → `bandara`. Yang masuk hanya bandara yang METAR-nya benar-benar
+dikirim ke pertukaran OPMET dunia:
+
+| ICAO | IATA | Bandara | Jarak dari kawah |
+|---|---|---|---|
+| `WILL` | TKG | Radin Inten II, Lampung Selatan | 99 km |
+| `WIII` | CGK | Soekarno-Hatta, Tangerang | 136 km |
+| `WIHH` | HLP | Halim Perdanakusuma, Jakarta Timur | 163 km |
+| `WIPP` | PLM | Sultan Mahmud Badaruddin II, Palembang | 365 km |
+
+Husein Sastranegara (`WICC`), Kertajati (`WICA`), dan Pondok Cabe (`WIHP`) sudah diperiksa
+satu per satu: ketiganya **tidak** menerbitkan METAR ke sana, jadi sengaja tidak
+dimasukkan daripada tampil kosong selamanya.
+
+Menambah bandara cukup satu baris; koordinatnya dipakai untuk jarak ke kawah dan uji
+poligon SIGMET:
+
+```json
+{ "icao": "WARR", "iata": "SUB", "nama": "Juanda", "kota": "Sidoarjo",
+  "provinsi": "Jawa Timur", "lat": -7.380, "lon": 112.787 }
+```
+
+FIR yang SIGMET-nya diambil diatur di `firPenerbangan` (bawaan `["WIIF"]` = FIR Jakarta).
+Menambah `"WAAF"` akan memunculkan SIGMET Ujung Pandang — berguna kalau gunung yang
+dipantau ada di Indonesia timur, mengganggu kalau tidak.
+
 ## Lokasi perangkat
 
 Tombol **"Pakai lokasi saya"** memakai geolocation peramban untuk mengganti pilihan kota
@@ -334,15 +450,16 @@ src/
     bmkg.js            gempa tektonik
     cuaca.js           Open-Meteo — kualitas udara & angin per lapisan
     publik.js          Google News RSS, X (temu lewat sematan/Nitter, lengkapi lewat FxTwitter), Threads
+    penerbangan.js     SIGMET abu & METAR bandara (NOAA AWC) — tanpa NOTAM, dan tahu diri soal itu
 config/
-  config.json          gunung yang dipantau, daftar kota, interval, sumber X
+  config.json          gunung yang dipantau, daftar kota, bandara, FIR, interval, sumber X
   ambang.json          titik patah ISPU, level PVMBG, teks tindakan — semua bersitasi
 public/
   index.html           satu halaman, tanpa langkah build
   gaya.css             token Flavida + palet status
   app.js               peta SVG, kompas angin, grafik — vanilla, tanpa kerangka kerja
   coastline.json       garis pantai Selat Sunda, 7 KB (Natural Earth 10m, disederhanakan)
-test.js                25 pemeriksaan mandiri, tanpa framework
+test.js                38 pemeriksaan mandiri, tanpa framework
 scripts/
   tangkap.mjs          tangkapan layar README lewat CDP (alat pengembangan)
   garis-pantai.mjs     buat ulang coastline.json dari Natural Earth (sekali jalan)
@@ -632,6 +749,9 @@ ulang. Orang memeriksa status gunung jam dua pagi.
   Google News RSS yang paling andal saat ini dan itulah yang mengisi kanal perbincangan.
 - **Gambar unggahan X dimuat dari CDN Twitter**, jadi peramban pembaca menghubungi
   `pbs.twimg.com`. Dikirim dengan `referrerpolicy="no-referrer"`.
+- **Status buka/tutup bandara tidak tersedia.** Itu berjalan lewat NOTAM dan tidak ada
+  saluran gratisnya; lihat tabel percobaannya di atas. Yang ada hanya peringatan abu
+  penerbangan dan laporan cuaca bandara.
 - **Tidak ada notifikasi.** Halaman ini harus dibuka. Push, SMS, dan siaran WhatsApp adalah
   langkah berikutnya, dan itu yang paling menolong orang yang tidak punya media sosial.
 
@@ -643,5 +763,8 @@ ulang. Orang memeriksa status gunung jam dua pagi.
 kabupaten/kota dan PVMBG. Status gunung dan rekomendasi disalin apa adanya dari laporan
 PVMBG — tidak ditambah, tidak ditafsirkan.
 
+**Untuk jadwal penerbangan, tanya maskapai.** Halaman ini tidak bisa memastikan bandara
+buka atau tutup, dan tidak pernah mengaku bisa.
+
 Data milik lembaga masing-masing: PVMBG/Badan Geologi KESDM, BMKG, KLHK, Open-Meteo,
-dan penerbit berita yang tercantum di tiap tautan.
+NOAA Aviation Weather Center, dan penerbit berita yang tercantum di tiap tautan.

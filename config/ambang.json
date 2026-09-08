@@ -291,7 +291,10 @@
     "Permen LHK P.14/2020": "https://peraturan.bpk.go.id/Details/168470/permen-lhk-no-p14menlhksetjenkum172020",
     "IVHHN / Kemenkes": "https://www.ivhhn.org/information/information-different-volcanic-ashfall-impacts",
     "Open-Meteo CAMS (model, bukan sensor darat)": "https://open-meteo.com/en/docs/air-quality-api",
-    "Open-Meteo (angin lapisan tekanan)": "https://open-meteo.com/en/docs"
+    "Open-Meteo (angin lapisan tekanan)": "https://open-meteo.com/en/docs",
+    "SIGMET abu (BMKG lewat NOAA AWC)": "https://aviationweather.gov/api/data/isigmet?format=raw",
+    "AirNav Indonesia (penerbit NOTAM)": "https://www.airnavindonesia.co.id/",
+    "InJourney Airports": "https://injourneyairports.id/"
   },
   "_sumberTautan": "Tautan rujukan per sumber, ditampilkan di tiap kartu tindakan supaya pembaca bisa memeriksa sendiri."
 }

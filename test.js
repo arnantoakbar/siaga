@@ -4,7 +4,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { jarakKm, arahDerajat, bedaSudut, mataAngin, keTeks } from './src/util.js';
-import { hitungIspu, ispuGabungan, radiusResmiKm, jalurAbu, analisaKota } from './src/analisa.js';
+import { hitungIspu, ispuGabungan, radiusResmiKm, jalurAbu, analisaKota, analisaBandara, didalamPoligon } from './src/analisa.js';
+import { jelasCuaca, pandangMeter } from './src/sumber/penerbangan.js';
 import { keWaktuISO, bagian } from './src/sumber/magma.js';
 import { relevan } from './src/kumpul.js';
 
@@ -178,6 +179,66 @@ uji('tanpa data sama sekali tetap aman dan tidak melempar error', () => {
   assert.equal(a.status, 'aman');
   assert.equal(a.ispu, null);
   assert.deepEqual(a.langkah, []);
+});
+
+console.log('\nPenerbangan');
+// Poligon SIGMET nyata: WIIF SIGMET 13, abu Anak Krakatau 8 September 2026.
+// Areanya menjulur ke barat daya dari kawah, ke arah Samudra Hindia.
+const areaAbu = [
+  { lat: -6.0, lon: 105.683 }, { lat: -8.533, lon: 105.317 }, { lat: -8.333, lon: 103.683 },
+  { lat: -6.5, lon: 102.983 }, { lat: -5.75, lon: 105.4 }, { lat: -6.0, lon: 105.683 },
+];
+uji('titik di dalam area abu terdeteksi', () => {
+  assert.equal(didalamPoligon(-7, 104.5, areaAbu), true);
+});
+uji('Soekarno-Hatta di luar area abu yang menjulur ke barat daya', () => {
+  assert.equal(didalamPoligon(-6.1249, 106.6534, areaAbu), false);
+});
+uji('poligon kurang dari tiga titik tidak pernah dianggap berisi', () => {
+  assert.equal(didalamPoligon(0, 0, [{ lat: 0, lon: 0 }, { lat: 1, lon: 1 }]), false);
+});
+
+uji('jarak pandang dibaca dari meter di teks METAR asli', () => {
+  assert.deepEqual(pandangMeter('METAR WIII 080030Z 21004KT 190V260 4000 HZ FEW020 26/23 Q1014 NOSIG'),
+    { meter: 4000, atauLebih: false });
+});
+uji('9999 berarti 10 km atau lebih, bukan 9.999 meter', () => {
+  assert.deepEqual(pandangMeter('METAR WIHH 080030Z 21012KT 9999 FEW020 28/21 Q1014'),
+    { meter: 10000, atauLebih: true });
+});
+uji('sandi cuaca diterjemahkan, yang tidak dikenal dibuang bukan dikarang', () => {
+  assert.deepEqual(jelasCuaca('-RA BR'), ['hujan ringan', 'kabut tipis']);
+  assert.deepEqual(jelasCuaca('VA'), ['abu vulkanik']);
+  assert.deepEqual(jelasCuaca('XX'), []);
+});
+
+const bdr = { icao: 'WIII', iata: 'CGK', nama: 'Soekarno-Hatta', kota: 'Tangerang', lat: -6.1249, lon: 106.6534 };
+const sig = [{ nomor: '13', fir: 'WIIF', titik: areaAbu }];
+uji('abu di METAR bandara membuat statusnya bahaya', () => {
+  const a = analisaBandara(bdr, gunung, { cuacaKode: 'VA' }, []);
+  assert.equal(a.status, 'bahaya');
+  assert.ok(a.dasar.includes('VA'));
+});
+uji('bandara di dalam area SIGMET berstatus siaga', () => {
+  const a = analisaBandara({ ...bdr, lat: -7, lon: 104.5 }, gunung, { cuacaKode: '' }, sig);
+  assert.equal(a.status, 'siaga');
+  assert.ok(a.sigmetNomor.includes('13'));
+});
+// Ini penjaga yang paling penting di berkas ini. Tanpa METAR, halaman TIDAK BOLEH
+// menyimpulkan apa pun tentang bandara — status null artinya "tidak tahu", dan
+// "tidak tahu" tidak boleh diam-diam berubah jadi "aman".
+uji('tanpa METAR status tetap null, tidak dianggap aman', () => {
+  const a = analisaBandara(bdr, gunung, undefined, []);
+  assert.equal(a.status, null);
+  assert.equal(a.metar, null);
+});
+uji('tidak ada label yang menyatakan bandara buka atau tutup', () => {
+  for (const m of [{ cuacaKode: 'VA' }, { cuacaKode: 'HZ' }, undefined])
+    for (const s of [[], sig]) {
+      const a = analisaBandara(bdr, gunung, m, s);
+      assert.doesNotMatch(`${a.label} ${a.dasar}`, /\b(buka|tutup|ditutup|dibuka|normal|batal)\b/i,
+        `label menyiratkan status operasional: ${a.label} / ${a.dasar}`);
+    }
 });
 
 console.log(`\n${n} pemeriksaan lolos.\n`);

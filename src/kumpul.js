@@ -8,7 +8,8 @@ import * as magma from './sumber/magma.js';
 import * as cuaca from './sumber/cuaca.js';
 import * as bmkg from './sumber/bmkg.js';
 import * as publik from './sumber/publik.js';
-import { analisaKota, ringkasGunung, ispuGabungan } from './analisa.js';
+import * as penerbangan from './sumber/penerbangan.js';
+import { analisaKota, analisaBandara, ringkasGunung, ispuGabungan } from './analisa.js';
 import { simpanLaporan, simpanUdara, simpanPos, catatSumber, riwayatLaporan, tulisPotret } from './db.js';
 
 const muat = (nama) => JSON.parse(readFileSync(new URL(`../config/${nama}`, import.meta.url)));
@@ -147,7 +148,7 @@ export async function kumpulkan(db) {
   const sTingkat = await coba(db, 'magma-tingkat-aktivitas', magma.tingkatAktivitas);
   const barisGunung = sTingkat.ok ? sTingkat.data.find((x) => x.gunung.toLowerCase() === g.nama.toLowerCase()) : null;
 
-  const [sLaporan, sHarian, sAngin, sUdara, sGempa, publikHasil] = await Promise.all([
+  const [sLaporan, sHarian, sAngin, sUdara, sGempa, sSigmet, sMetar, publikHasil] = await Promise.all([
     barisGunung
       ? coba(db, 'magma-laporan', () => magma.laporan(barisGunung.laporanUrl))
       : { nama: 'magma-laporan', ok: false, pesan: 'tautan laporan tidak ditemukan', waktu: new Date().toISOString() },
@@ -155,6 +156,8 @@ export async function kumpulkan(db) {
     coba(db, 'angin', () => cuaca.anginKolom(g.lat, g.lon)),
     coba(db, 'udara', () => cuaca.kualitasUdara(CONFIG.kota)),
     coba(db, 'bmkg-gempa', bmkg.gempa),
+    coba(db, 'sigmet-abu', () => penerbangan.sigmetAbu(CONFIG.firPenerbangan || [])),
+    coba(db, 'metar-bandara', () => penerbangan.metar((CONFIG.bandara || []).map((b) => b.icao))),
     kanalPublik(db),
   ]);
 
@@ -178,6 +181,18 @@ export async function kumpulkan(db) {
     .map((k) => analisaKota(k, g, laporan, udaraPer.get(k.id), angin, AMBANG))
     .sort((a, b) => a.jarakKm - b.jarakKm);
 
+  // SIGMET yang gagal diambil TIDAK boleh berubah jadi "tidak ada peringatan":
+  // daftar kosong dan pengambilan gagal artinya berbeda, dan yang kedua harus
+  // terlihat. Karena itu status bandara hanya dihitung kalau keduanya berhasil.
+  const sigmet = sSigmet.ok ? sSigmet.data : null;
+  const metarPer = new Map((sMetar.ok ? sMetar.data : []).map((m) => [m.icao, m]));
+  const bandara =
+    sSigmet.ok || sMetar.ok
+      ? (CONFIG.bandara || [])
+          .map((b) => analisaBandara(b, g, metarPer.get(b.icao), sigmet ?? []))
+          .sort((a, b) => a.jarakKm - b.jarakKm)
+      : [];
+
   // Tren kegempaan antar periode laporan — hanya bisa dari simpanan sendiri.
   const tren = riwayatLaporan(db, g.nama, 28).map((l) => ({
     waktu: l.waktuLaporan,
@@ -189,7 +204,7 @@ export async function kumpulkan(db) {
     total: (l.kegempaan || []).reduce((a, x) => a + x.jumlah, 0),
   }));
 
-  const kesehatan = [sTingkat, sLaporan, sHarian, sAngin, sUdara, sGempa, ...publikHasil.kesehatan].map(
+  const kesehatan = [sTingkat, sLaporan, sHarian, sAngin, sUdara, sGempa, sSigmet, sMetar, ...publikHasil.kesehatan].map(
     ({ data, ...s }) => s
   );
 
@@ -202,6 +217,9 @@ export async function kumpulkan(db) {
     laporanCadangan,
     angin,
     kota,
+    bandara,
+    sigmet,
+    sigmetGagal: !sSigmet.ok,
     tren,
     gempa: sGempa.ok ? sGempa.data : null,
     pos: publikHasil.pos,

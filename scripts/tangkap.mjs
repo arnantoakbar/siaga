@@ -49,6 +49,8 @@ const ADEGAN = [
       document.querySelector('#tombol-lokasi').click();`,
     jeda: 3200,
   },
+  { nama: '15-bandara-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'dampak', ke: '#j-bandara', blok: 'start' },
+  { nama: '16-bandara-terang', w: 390, h: 900, dsf: 3, tema: 'terang', tab: 'dampak', ke: '#j-bandara', blok: 'start' },
   {
     nama: '14-windy-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'lokasi', gulir: 240,
     // Persetujuan harus lewat tombolnya: menulis localStorage saja tidak cukup,
@@ -108,6 +110,11 @@ try {
     const cdp = new Cdp(ws);
 
     await cdp.kirim('Page.enable');
+    // Aset ber-?v= dikirim server dengan `immutable` setahun, dan profil Chrome di
+    // /tmp bertahan antar-jalan. Tanpa ini, mengedit app.js tanpa menaikkan nomor
+    // versinya menghasilkan tangkapan layar dari berkas lama — pernah terjadi.
+    await cdp.kirim('Network.enable');
+    await cdp.kirim('Network.setCacheDisabled', { cacheDisabled: true });
     await cdp.kirim('Emulation.setDeviceMetricsOverride', {
       width: a.w, height: a.h, deviceScaleFactor: a.dsf, mobile: a.w < 700,
     });
