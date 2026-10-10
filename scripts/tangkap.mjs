@@ -23,13 +23,13 @@ const ADEGAN = [
   {
     nama: '05-tindakan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'dampak', gulir: 700,
     ke: '#tindakan', blok: 'center',
-    siapkan: `document.querySelectorAll('.petak-sel')[2]?.click();`, jeda: 700,
+    siapkan: `document.querySelectorAll('.sg-petak__sel')[2]?.click();`, jeda: 700,
   },
-  { nama: '06-linimasa-mobile', w: 390, h: 980, dsf: 3, tema: 'gelap', tab: 'sumber', ke: '.kabar' },
+  { nama: '06-linimasa-mobile', w: 390, h: 980, dsf: 3, tema: 'gelap', tab: 'sumber', ke: '.sg-feed' },
   { nama: '07-situasi-terang', w: 390, h: 940, dsf: 3, tema: 'terang', tab: 'situasi' },
   { nama: '08-situasi-desktop',w: 1100, h: 940, dsf: 2, tema: 'terang', tab: 'situasi' },
   { nama: '09-peta-desktop',   w: 1100, h: 940, dsf: 2, tema: 'terang', tab: 'lokasi', ke: '#peta-wadah', blok: 'center' },
-  { nama: '10-linimasa-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'sumber', ke: '.kabar' },
+  { nama: '10-linimasa-desktop', w: 1100, h: 940, dsf: 2, tema: 'gelap', tab: 'sumber', ke: '.sg-feed' },
   {
     nama: '11-bantuan-mobile', w: 390, h: 900, dsf: 3, tema: 'gelap', tab: 'situasi',
     siapkan: `document.querySelector('#tombol-bantuan').click();`, jeda: 900,
@@ -127,6 +127,18 @@ try {
     else if (a.gulir)
       await cdp.kirim('Runtime.evaluate', { expression: `window.scrollTo(0, ${a.gulir})` });
     await tidur(900); // animasi kerucut selesai
+
+    // Pemeriksaan tata letak: halaman yang bisa digulir mendatar, atau elemen yang
+    // melewati tepi kanan, hampir selalu bug (pernah terjadi pada teks SIGMET mentah).
+    const audit = await cdp.kirim('Runtime.evaluate', { returnByValue: true, expression: `(() => {
+      const de = document.documentElement, lebar = de.clientWidth;
+      const meluber = [...document.querySelectorAll('main *, nav *, footer *')]
+        .filter((n) => { const r = n.getBoundingClientRect(); return r.width && r.right > lebar + 1 && !n.closest('[hidden]') && !n.closest('pre,.fl-tablewrap,.fl-seg,svg'); })
+        .slice(0, 4).map((n) => n.tagName + '.' + String(n.className?.baseVal ?? n.className).slice(0, 40));
+      return { lebar, gulir: de.scrollWidth, meluber };
+    })()` });
+    const au = audit.result.value;
+    if (au.gulir > au.lebar || au.meluber.length) console.warn(`  ! ${a.nama}: gulir ${au.gulir} > ${au.lebar}`, au.meluber.join(' | '));
 
     const { data } = await cdp.kirim('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     writeFileSync(`${KELUAR}/${a.nama}.png`, Buffer.from(data, 'base64'));

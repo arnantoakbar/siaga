@@ -30,11 +30,11 @@ const lebarWadah = (sel, cadangan = 360) => {
   return Math.max(300, Math.min(900, Math.round(n?.clientWidth || cadangan)));
 };
 
-// Kelas `ikon` wajib ikut: ia yang memberi ukuran bawaan. SVG tanpa width/height
-// diberi 300x150 oleh peramban, dan dengan `svg { display: block }` global ikon
-// hiasan berubah jadi balok raksasa — pernah terjadi pada keterangan kamera.
+// Kelas `fl-icon` dari kit wajib ikut: ia yang memberi ukuran bawaan (1.25em). SVG tanpa
+// width/height diberi 300x150 oleh peramban, dan ikon hiasan berubah jadi balok raksasa;
+// itu pernah terjadi pada keterangan kamera.
 const ikon = (nama, kelas) =>
-  `<svg viewBox="0 0 24 24" class="ikon${kelas ? ` ${kelas}` : ''}" aria-hidden="true"><use href="#i-${String(nama).replace(/^i-/, '')}"/></svg>`;
+  `<svg viewBox="0 0 24 24" class="fl-icon${kelas ? ` ${kelas}` : ''}" aria-hidden="true"><use href="#i-${String(nama).replace(/^i-/, '')}"/></svg>`;
 const aman = (s) => String(s ?? '').replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 // PVMBG menulis "Masyarakat/pengunjung/wisatawan/pendaki" sebagai satu kata panjang.
 // Peramban tidak memutus baris setelah garis miring, jadi disisipkan titik putus
@@ -56,10 +56,15 @@ function lalu(iso) {
 }
 
 const LABEL_STATUS = { aman: 'Aman', waspada: 'Waspada', siaga: 'Siaga', bahaya: 'Bahaya' };
-const IKON_STATUS = { aman: 'i-cek', waspada: 'i-info', siaga: 'i-awas', bahaya: 'i-awas' };
-const warnaStatus = (s) => getComputedStyle(document.body).getPropertyValue(`--h-${s}`).trim() || '#999';
+// Status dipetakan ke empat tingkat visual kit Flavida (.fl-level): lingkaran, segitiga,
+// belah ketupat, segi delapan. Bentuk, angka tingkat, dan kata selalu berjalan bersama,
+// jadi status tidak pernah bergantung pada warna saja.
+const TINGKAT = { aman: 1, waspada: 2, siaga: 3, bahaya: 4 };
+// Berupa var(), bukan nilai terhitung: peramban yang menyelesaikannya, jadi warna ikut
+// berganti saat tema berganti tanpa perlu digambar ulang.
+const warnaStatus = (s) => `var(--level-${TINGKAT[s] || 1})`;
 const lencana = (status, teks) =>
-  `<span class="lencana st-${status}"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#${IKON_STATUS[status]}"/></svg>${aman(teks ?? LABEL_STATUS[status])}</span>`;
+  `<span class="fl-level" data-level="${TINGKAT[status] || 1}">${aman(teks ?? LABEL_STATUS[status])}</span>`;
 
 // ── keadaan ───────────────────────────────────────────────────────────────
 let D = null;
@@ -77,9 +82,9 @@ let tindakanTerbuka = null;
 let cctvBesar = null;
 
 // ── tema: terang atau gelap; tanpa pilihan tersimpan, ikut perangkat ──────
-// `tema` bernilai null selama pembaca belum memilih. Selama null, atribut
-// data-tema tidak dipasang sama sekali sehingga @media prefers-color-scheme
-// yang menentukan — termasuk saat perangkat berganti tema di tengah jalan.
+// `tema` bernilai null selama pembaca belum memilih. Selama null, data-theme="auto"
+// dan kit yang mengikuti prefers-color-scheme, termasuk saat perangkat berganti
+// tema di tengah jalan.
 const gelapPerangkat = () => matchMedia('(prefers-color-scheme: dark)').matches;
 const temaUrl = new URLSearchParams(location.search).get('tema');
 let tema =
@@ -89,8 +94,8 @@ let tema =
 const temaEfektif = () => tema ?? (gelapPerangkat() ? 'gelap' : 'terang');
 
 function terapkanTema() {
-  if (tema) document.documentElement.setAttribute('data-tema', tema);
-  else document.documentElement.removeAttribute('data-tema');
+  // Nilai kit: light | dark | auto. `auto` mengikuti perangkat, termasuk saat perangkat berganti.
+  document.documentElement.setAttribute('data-theme', tema === 'gelap' ? 'dark' : tema === 'terang' ? 'light' : 'auto');
 
   // Tombol menampilkan tujuan, bukan keadaan sekarang: bulan berarti "ganti ke gelap".
   const lawan = temaEfektif() === 'gelap' ? 'terang' : 'gelap';
@@ -109,7 +114,13 @@ function pindahTab(ke, dariPengguna = true) {
   if (!TAMPILAN.includes(ke)) ke = 'situasi';
   tampilan = ke;
   for (const t of TAMPILAN) $(`#v-${t}`).hidden = t !== ke;
-  for (const b of $$('.tab-u')) b.setAttribute('aria-current', b.dataset.ke === ke);
+  // Bilah atas (tautan) memakai aria-current; tab bawah (ponsel) memakai aria-selected.
+  for (const b of $$('[data-tab]')) {
+    const kini = b.dataset.tab === ke;
+    if (b.getAttribute('role') === 'tab') b.setAttribute('aria-selected', kini);
+    else if (kini) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
   if (dariPengguna) {
     history.replaceState(null, '', `#${ke}`);
     scrollTo({ top: 0, behavior: 'instant' });
@@ -146,13 +157,15 @@ function gambarTampilanAktif(ulang = false) {
 function gambarSegar() {
   const s = $('#segar');
   const umurMenit = (Date.now() - Date.parse(D.dibuat)) / 60000;
-  s.dataset.usia = umurMenit < 30 ? 'baru' : umurMenit < 180 ? 'lawas' : 'basi';
+  // Hijau (bawaan kit) di bawah 30 menit, kuning bersegitiga sampai 3 jam, merah sesudahnya.
+  if (umurMenit < 30) s.removeAttribute('data-age');
+  else s.dataset.age = umurMenit < 180 ? 'stale' : 'old';
   s.title = `Data diambil ${jamWib(D.dibuat)}`;
   $('#segar-teks').textContent = `Diperbarui ${lalu(D.dibuat)}`;
   // Versi pendek untuk layar sempit: umur data terlalu penting untuk disembunyikan,
-  // tapi kalimat penuhnya tidak muat berdampingan dengan tombol bantuan dan tema.
-  const menit = Math.round((Date.now() - Date.parse(D.dibuat)) / 60000);
-  $('#segar-pendek').textContent = menit < 1 ? 'baru' : menit < 60 ? `${menit} mnt` : `${Math.floor(menit / 60)} jam`;
+  // tapi kalimat penuhnya tidak muat sebaris dengan dua status di strip.
+  const menit = Math.round(umurMenit);
+  $('#segar-pendek').textContent = menit < 1 ? 'baru saja' : menit < 60 ? `${menit} mnt` : `${Math.floor(menit / 60)} jam`;
   $('#kaki-waktu').textContent = `Halaman ini menarik data tiap beberapa menit. Pengambilan terakhir ${jamWib(D.dibuat)}.`;
 }
 
@@ -161,14 +174,10 @@ function gambarStrip() {
   const k = kotaKini();
   $('#strip').hidden = false;
   $('#strip-gunung').innerHTML = r
-    ? `<span class="titik-st" style="background:${warnaStatus(r.status)}"></span>
-       <div><b>Level ${aman(r.level)} ${aman(r.levelNama)}</b>
-       <small>gunung${r.radiusLaranganKm ? ` · jauhi ${r.radiusLaranganKm} km` : ''}</small></div>`
-    : `<span class="titik-st" style="background:var(--ink-3)"></span><div><b>Status gunung tidak ada</b><small>sumber PVMBG gagal</small></div>`;
+    ? `<small>Gunung</small>${lencana(r.status, `${r.level} · ${r.levelNama}`)}`
+    : `<small>Gunung</small><span class="fl-fresh" data-age="old">Status tidak ada</span>`;
   $('#strip-kota').innerHTML = k
-    ? `<span class="titik-st" style="background:${warnaStatus(k.status)}"></span>
-       <div><b>${aman(k.nama)}: ${LABEL_STATUS[k.status]}</b>
-       <small>${k.jarakKm} km · ISPU ${k.ispu?.nilai ?? '—'}</small></div>`
+    ? `<small>${aman(k.nama)} · ${k.jarakKm} km</small>${lencana(k.status)}`
     : '';
 }
 
@@ -201,7 +210,7 @@ function ringkasSituasi(r, lap) {
     bagian.push(`Tidak ada gempa letusan tercatat pada periode ${lap.periodeMulai}–${lap.periodeSelesai} WIB.`);
 
   if (erupsiTeks) bagian.push(erupsiTeks[0].trim().replace(/^./, (c) => c.toUpperCase()));
-  if (r.adaTremor) bagian.push('Tremor menerus masih terekam — magma masih bergerak di bawah kawah.');
+  if (r.adaTremor) bagian.push('Tremor menerus masih terekam: magma masih bergerak di bawah kawah.');
 
   // Ke mana abunya condong: lapisan angin paling kencang di atas kawah.
   const l = (D.angin?.lapisan || []).reduce((a, b) => (!a || b.kecepatanKmj > a.kecepatanKmj ? b : a), null);
@@ -221,30 +230,30 @@ function gambarVonis() {
   const v = $('#vonis');
 
   if (!r || !lap) {
-    v.innerHTML = `<div class="galat"><b>Status resmi tidak bisa diambil</b>
-      Data dari MAGMA/PVMBG gagal dimuat, jadi halaman ini tidak bisa menampilkan status gunung.
-      Jangan simpulkan apa pun dari sini — buka <a href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas" rel="noopener">magma.esdm.go.id</a> langsung.</div>`;
+    v.innerHTML = `<div class="fl-callout sg-galat-vonis" data-tone="danger"><span class="fl-callout__icon">${ikon('awas')}</span><div>
+      <h3>Status resmi tidak bisa diambil</h3>
+      <p>Data dari MAGMA/PVMBG gagal dimuat, jadi halaman ini tidak bisa menampilkan status gunung.
+      Jangan simpulkan apa pun dari sini. Buka <a class="fl-link" href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas" rel="noopener">magma.esdm.go.id</a> langsung.</p>
+      <img src="flavida/flav-worried.webp" alt="Flav tampak khawatir" width="88" height="84"></div></div>`;
     return;
   }
 
   const arti = ARTI_LEVEL[r.level];
-
   v.innerHTML = `
-    <div class="vonis-atas">
-      ${lencana(r.status, `Level ${r.level} · ${r.levelNama}`)}
-      ${r.radiusLaranganKm ? `<span class="lencana st-bahaya">${ikon('perisai')}Dilarang dalam ${r.radiusLaranganKm} km</span>` : ''}
-    </div>
-    <h1>${aman(lap.gunung)}</h1>
-    <p class="vonis-lead">${aman(arti)}</p>
-    <ul class="ringkas-kini">${ringkasSituasi(r, lap).map((b) => `<li>${aman(b)}</li>`).join('')}</ul>
-    <p class="cap">${ikon('jam')}<span>Laporan pengamatan PVMBG <b>${aman(lap.tanggal)}</b>, periode ${aman(lap.periodeMulai)}–${aman(lap.periodeSelesai)} WIB.
-      Terbit ${lalu(lap.waktuLaporan)}. Pengamat: ${aman(lap.pembuat || '—')}.</span></p>
-    ${D.laporanCadangan ? `<p class="cap peringatan-basi">${ikon('awas')}<span><b>Pengambilan laporan terbaru gagal.</b> Yang tampil adalah laporan tersimpan terakhir. Level gunung tetap dari tabel tingkat aktivitas PVMBG.</span></p>` : ''}
-    <ul class="fakta">
-      <li><b>${r.gempaLetusan ?? '—'}</b> gempa letusan periode ini</li>
-      <li><b>${r.totalGempa ?? '—'}</b> total gempa terekam</li>
-      <li>Tremor menerus: <b>${r.adaTremor == null ? '—' : r.adaTremor ? 'ada' : 'tidak ada'}</b></li>
-    </ul>`;
+    <div class="sg-hero">
+      <h1 class="fl-display-l">${aman(lap.gunung)} berstatus <mark class="fl-marker">Level ${aman(r.level)}</mark></h1>
+      ${r.radiusLaranganKm ? `<div class="sg-hero__tanda"><span class="fl-level" data-level="4">Dilarang dalam ${r.radiusLaranganKm} km</span></div>` : ''}
+      <p class="fl-lead">${aman(arti)}</p>
+      <ul class="sg-poin">${ringkasSituasi(r, lap).map((b) => `<li>${aman(b)}</li>`).join('')}</ul>
+      <div class="sg-fakta">
+        <div class="fl-stat"><small>Gempa letusan</small><b>${r.gempaLetusan ?? '—'}</b></div>
+        <div class="fl-stat"><small>Total gempa</small><b>${r.totalGempa ?? '—'}</b></div>
+        <div class="fl-stat"><small>Tremor menerus</small><b class="teks">${r.adaTremor == null ? '—' : r.adaTremor ? 'Ada' : 'Tidak ada'}</b></div>
+      </div>
+      <p class="sg-cap">${ikon('jam')}<span>Laporan pengamatan PVMBG <b>${aman(lap.tanggal)}</b>, periode ${aman(lap.periodeMulai)}–${aman(lap.periodeSelesai)} WIB.
+        Terbit ${lalu(lap.waktuLaporan)}. Pengamat: ${aman(lap.pembuat || '—')}.</span></p>
+      ${D.laporanCadangan ? `<p class="sg-cap sg-cap--awas">${ikon('awas')}<span><b>Pengambilan laporan terbaru gagal.</b> Yang tampil adalah laporan tersimpan terakhir. Level gunung tetap dari tabel tingkat aktivitas PVMBG.</span></p>` : ''}
+    </div>`;
 
   gambarTangga(r);
 
@@ -253,29 +262,35 @@ function gambarVonis() {
     lap.keterangan && `<p><b>Keterangan lainnya.</b> ${aman(lap.keterangan)}</p>`,
     lap.klimatologi && `<p><b>Klimatologi.</b> ${aman(lap.klimatologi)}</p>`,
     r.ringkasHarian && `<p><b>Ringkasan harian.</b> ${aman(r.ringkasHarian)}</p>`,
-    `<p><a href="${aman(lap.url)}" target="_blank" rel="noopener">Buka laporan asli di MAGMA Indonesia</a></p>`,
+    `<p><a class="fl-link" href="${aman(lap.url)}" target="_blank" rel="noopener">Buka laporan asli di MAGMA Indonesia</a></p>`,
   ].filter(Boolean).join('');
 }
 
+// Hanya huruf pertama: toLowerCase() utuh ikut menurunkan awal kalimat kedua ("... erupsi. ada radius").
+const awalKecil = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
+
+/** Empat tingkat PVMBG sebagai tangga: makin ke kanan makin berbahaya. */
 /** Empat tingkat PVMBG sebagai tangga: makin ke kanan makin berbahaya. */
 function gambarTangga(r) {
+  const idx = TANGGA.findIndex((t) => t.kode === r.level);
+  const naik = TANGGA[idx + 1];
   $('#tangga-level').innerHTML = `
-    <div class="tangga">
-      <div class="tangga-baris">
-        ${TANGGA.map((t) => `
-          <div class="tangga-sel ${t.kode === r.level ? `st-${t.status}` : ''}" data-kini="${t.kode === r.level}">
+    <div class="sg-tangga">
+      <div class="sg-tangga__baris">
+        ${TANGGA.map((t, i) => `
+          <div class="sg-tangga__sel" data-level="${i + 1}" data-kini="${t.kode === r.level}" ${t.kode === r.level ? 'aria-current="true"' : ''}>
             <small>Level ${t.kode}</small><b>${t.nama}</b>
           </div>`).join('')}
       </div>
-      <div class="tangga-arah"><span>lebih aman</span><span>lebih berbahaya →</span></div>
-      <p class="tangga-arti"><b>Sekarang di Level ${aman(r.level)} dari IV.</b>
+      <div class="sg-tangga__arah"><span>lebih aman</span><span>lebih berbahaya →</span></div>
+      <p class="sg-tangga__arti"><b>Sekarang di Level ${aman(r.level)} dari IV.</b>
         ${aman(ARTI_LEVEL[r.level])}
-        ${r.level === 'IV' ? '' : `Kalau naik ke Level ${TANGGA[TANGGA.findIndex((t) => t.kode === r.level) + 1].kode}, artinya ${aman(ARTI_LEVEL[TANGGA[TANGGA.findIndex((t) => t.kode === r.level) + 1].kode]).toLowerCase()}`}
+        ${naik ? `Kalau naik ke Level ${naik.kode}, artinya ${aman(awalKecil(ARTI_LEVEL[naik.kode]))}` : ''}
       </p>
-      <details class="lipat"><summary>Arti keempat tingkat</summary>
-        <div class="lipat-isi">
-          <ol>${TANGGA.map((t) => `<li><b>Level ${t.kode} — ${t.nama}.</b> ${aman(ARTI_LEVEL[t.kode])}</li>`).join('')}</ol>
-          <p><a class="tautan-sumber" href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas" target="_blank" rel="noopener">${ikon('tautan')}Tabel tingkat aktivitas PVMBG</a></p>
+      <details class="fl-accordion sg-lipat"><summary>Arti keempat tingkat</summary>
+        <div>
+          <ol>${TANGGA.map((t) => `<li><b>Level ${t.kode}, ${t.nama}.</b> ${aman(ARTI_LEVEL[t.kode])}</li>`).join('')}</ol>
+          <p><a class="fl-link sg-sumber" href="https://magma.esdm.go.id/v1/gunung-api/tingkat-aktivitas" target="_blank" rel="noopener">${ikon('tautan')}Tabel tingkat aktivitas PVMBG</a></p>
         </div>
       </details>
     </div>`;
@@ -288,49 +303,50 @@ async function gambarCctv() {
     const j = await r.json();
     if (!j.kamera?.length) throw new Error(j.galat || 'tidak ada kamera terbaca');
     const t = Date.parse(j.diambil);
+    // Bingkai diperbarui sekitar semenit sekali: lewat 10 menit berarti ada yang macet.
+    const menit = (Date.now() - t) / 60000;
+    const usia = menit < 10 ? '' : menit < 60 ? ' data-age="stale"' : ' data-age="old"';
 
     wadah.innerHTML = `
-      <div class="cctv-grid">
+      <div class="sg-cam-grid">
         ${j.kamera.map((k, i) => `
-          <button class="cctv-sel" type="button" data-i="${i}" title="${aman(k.nama)}">
+          <button class="fl-cam sg-cam" type="button" data-i="${i}" aria-pressed="false" title="${aman(k.nama)}">
             <img src="/api/cctv/${i}.jpg?t=${t}" alt="Kamera ${aman(k.nama)}"
                  width="${k.lebar || 150}" height="${k.tinggi || 84}">
-            <span class="cctv-gagal">${ikon('silang')}Bingkai tidak tersedia</span>
-            <figcaption>${aman(k.nama.replace(/^Anak Krakatau\s*-\s*/i, ''))}</figcaption>
+            <span class="sg-cam__gagal">${ikon('silang')}Bingkai tidak tersedia</span>
+            <span class="fl-cam__bar"><span>${aman(k.nama.replace(/^Anak Krakatau\s*-\s*/i, ''))}</span></span>
           </button>`).join('')}
       </div>
       <div id="cctv-besar"></div>
-      <p class="cctv-kaki">${ikon('kamera')} Bingkai diperbarui sekitar semenit sekali; diambil ${lalu(j.diambil)}.
-        Ukuran 150 × 84 piksel, sebagaimana disediakan halaman publik MAGMA.
-        Gambar oleh ${aman(j.lisensi)}, disajikan tanpa perubahan —
-        <a href="${aman(j.sumberUrl)}" target="_blank" rel="noopener">buka di MAGMA</a>.</p>`;
+      <p class="sg-cam-kaki"><span class="fl-fresh"${usia}>Diambil ${lalu(j.diambil)}</span>
+        Bingkai diperbarui sekitar semenit sekali. Ukuran 150 × 84 piksel, sebagaimana disediakan halaman publik MAGMA.
+        Gambar oleh ${aman(j.lisensi)}, disajikan tanpa perubahan.
+        <a class="fl-link" href="${aman(j.sumberUrl)}" target="_blank" rel="noopener">Buka di MAGMA</a>.</p>`;
 
     // Bingkai yang gagal dimuat tidak boleh menyisakan ikon gambar rusak bawaan
     // peramban; diganti keterangan yang menyebutkan apa yang terjadi.
-    for (const im of $$('.cctv-sel img', wadah)) {
-      im.onerror = () => {
-        im.dataset.gagal = '1';
-        im.closest('.cctv-sel').dataset.gagal = 'true';
-      };
+    for (const im of $$('.sg-cam img', wadah)) {
+      im.onerror = () => { im.closest('.sg-cam').dataset.gagal = 'true'; };
       if (im.complete && im.naturalWidth === 0) im.onerror();
     }
 
-    for (const b of $$('.cctv-sel', wadah))
+    for (const b of $$('.sg-cam', wadah))
       b.onclick = () => {
         const i = Number(b.dataset.i);
         cctvBesar = cctvBesar === i ? null : i;
+        for (const x of $$('.sg-cam', wadah)) x.setAttribute('aria-pressed', Number(x.dataset.i) === cctvBesar);
         $('#cctv-besar').innerHTML =
           cctvBesar == null
             ? ''
-            : `<figure>
-                 <img src="/api/cctv/${cctvBesar}.jpg?t=${t}" alt="${aman(j.kamera[cctvBesar].nama)}">
-                 <figcaption class="cctv-kaki">${aman(j.kamera[cctvBesar].nama)} · ${j.kamera[cctvBesar].lebar}×${j.kamera[cctvBesar].tinggi} piksel ·
-                   <a href="${aman(j.sumberUrl)}" target="_blank" rel="noopener">lihat di MAGMA</a></figcaption>
+            : `<figure class="sg-cam-besar">
+                 <div class="fl-cam"><img src="/api/cctv/${cctvBesar}.jpg?t=${t}" alt="${aman(j.kamera[cctvBesar].nama)}"></div>
+                 <figcaption class="sg-cam-kaki">${aman(j.kamera[cctvBesar].nama)} · ${j.kamera[cctvBesar].lebar}×${j.kamera[cctvBesar].tinggi} piksel ·
+                   <a class="fl-link" href="${aman(j.sumberUrl)}" target="_blank" rel="noopener">lihat di MAGMA</a></figcaption>
                </figure>`;
       };
   } catch (e) {
-    wadah.innerHTML = `<p class="cap">${ikon('silang')}<span>Kamera pemantau tidak bisa diambil: ${aman(e.message)}.
-      Coba langsung di <a href="https://magma.esdm.go.id/v1/gunung-api/cctv" target="_blank" rel="noopener">MAGMA Indonesia</a>.</span></p>`;
+    wadah.innerHTML = `<div class="fl-alert fl-alert--warning">${ikon('silang')}<div><strong>Kamera pemantau tidak bisa diambil</strong>
+      <p>${aman(e.message)}. Coba langsung di <a class="fl-link" href="https://magma.esdm.go.id/v1/gunung-api/cctv" target="_blank" rel="noopener">MAGMA Indonesia</a>.</p></div></div>`;
   }
 }
 
@@ -338,7 +354,7 @@ function gambarGempa() {
   const g = D.laporan?.kegempaan || [];
   const wadah = $('#gempa-wadah');
   if (!g.length) {
-    wadah.innerHTML = '<p style="padding:24px;color:var(--ink-3)">Rincian kegempaan tidak tersedia pada laporan terakhir.</p>';
+    wadah.innerHTML = '<p class="sg-kosong" style="padding:24px">Rincian kegempaan tidak tersedia pada laporan terakhir.</p>';
     return;
   }
   const urut = [...g].sort((a, b) => b.jumlah - a.jumlah);
@@ -360,11 +376,11 @@ function gambarGempa() {
     const sorot = /letusan|erupsi/i.test(x.jenis);
     svg.append(
       sempit
-        ? el('text', { x: ml, y: y - 6, fill: sorot ? 'var(--ink)' : 'var(--ink-2)', 'font-size': 13, 'font-weight': sorot ? 700 : 500 }, x.jenis)
-        : el('text', { x: ml - 12, y: y + tb / 2 + 4, 'text-anchor': 'end', fill: sorot ? 'var(--ink)' : 'var(--ink-2)', 'font-size': 13, 'font-weight': sorot ? 700 : 500 }, x.jenis)
+        ? el('text', { x: ml, y: y - 6, fill: sorot ? 'var(--color-ink)' : 'var(--color-mid)', 'font-size': 13, 'font-weight': sorot ? 800 : 600 }, x.jenis)
+        : el('text', { x: ml - 12, y: y + tb / 2 + 4, 'text-anchor': 'end', fill: sorot ? 'var(--color-ink)' : 'var(--color-mid)', 'font-size': 13, 'font-weight': sorot ? 800 : 600 }, x.jenis)
     );
-    svg.append(el('rect', { x: ml, y, width: w, height: tb, rx: 4, fill: sorot ? 'var(--h-bahaya)' : 'var(--accent)', 'fill-opacity': sorot ? 1 : 0.68 }));
-    svg.append(el('text', { x: ml + w + 9, y: y + tb / 2 + 4.5, fill: 'var(--ink)', 'font-size': 13, 'font-weight': 700 }, String(x.jumlah)));
+    svg.append(el('rect', { x: ml, y, width: w, height: tb, rx: 6, fill: sorot ? 'var(--chart-1)' : 'var(--chart-8)', 'fill-opacity': sorot ? 1 : 0.85 }));
+    svg.append(el('text', { x: ml + w + 9, y: y + tb / 2 + 4.5, fill: 'var(--color-ink)', 'font-size': 13, 'font-weight': 800 }, String(x.jumlah)));
     const t = el('title');
     t.textContent = x.teks;
     svg.append(t);
@@ -422,11 +438,11 @@ function gambarRingkasLokasi() {
   const k = kotaKini();
   if (!k) return;
   $('#ringkas-lokasi').innerHTML = `
-    <dl class="ukur ukur-2">
-      <div><dt>Jarak</dt><dd>${k.jarakKm}<small> km</small></dd></div>
-      <div><dt>Arah</dt><dd style="font-size:19px">${aman(k.arahMata)}</dd></div>
-      <div><dt>Jalur abu</dt><dd style="font-size:19px">${k.diJalurAbu ? 'Ya' : 'Tidak'}</dd></div>
-    </dl>`;
+    <div class="sg-ukur">
+      <div class="fl-stat"><small>Jarak</small><b>${k.jarakKm}<em>km</em></b></div>
+      <div class="fl-stat"><small>Arah</small><b class="teks">${aman(k.arahMata)}</b></div>
+      <div class="fl-stat"><small>Jalur abu</small><b class="teks">${k.diJalurAbu ? 'Ya' : 'Tidak'}</b></div>
+    </div>`;
 }
 
 // ── 3. DAMPAK ─────────────────────────────────────────────────────────────
@@ -435,17 +451,17 @@ function gambarDampak() {
   if (!k) return;
   const i = k.ispu;
   $('#kartu-dampak').innerHTML = `
-    <div class="kartu-kota">
-      <div class="kota-kepala">
+    <div class="fl-card sg-kota">
+      <div class="sg-kota__kepala">
         <div><h3>${aman(k.nama)}</h3><p>${k.dariPerangkat ? 'Dari lokasi perangkat kamu' : aman(k.provinsi)}</p></div>
         ${lencana(k.status)}
       </div>
-      <dl class="ukur ukur-2">
-        <div><dt>Jarak</dt><dd>${k.jarakKm}<small> km</small></dd></div>
-        <div><dt>ISPU 24 jam</dt><dd>${i ? i.nilai : '—'}<small> ${i ? aman(i.kategori) : 'data tidak ada'}</small></dd></div>
-        <div><dt>Jalur abu</dt><dd style="font-size:19px">${k.diJalurAbu ? 'Ya' : 'Tidak'}</dd></div>
-      </dl>
-      ${k.alasan.length ? `<ul class="alasan">${k.alasan.map((a) => `<li>${ikon('info')}<div>${bolehPutus(a.teks)}
+      <div class="sg-ukur">
+        <div class="fl-stat"><small>Jarak</small><b>${k.jarakKm}<em>km</em></b></div>
+        <div class="fl-stat"><small>ISPU 24 jam</small><b>${i ? i.nilai : '—'}</b><span class="sg-kat">${i ? aman(i.kategori) : 'data tidak ada'}</span></div>
+        <div class="fl-stat"><small>Jalur abu</small><b class="teks">${k.diJalurAbu ? 'Ya' : 'Tidak'}</b></div>
+      </div>
+      ${k.alasan.length ? `<ul class="sg-alasan">${k.alasan.map((a) => `<li>${ikon('info')}<div>${bolehPutus(a.teks)}
             <small>${aman(a.sumber)}</small>${tautanSumber(a)}</div></li>`).join('')}</ul>` : ''}
     </div>`;
 }
@@ -458,45 +474,46 @@ function gambarDampak() {
 /** Tautan rujukan, kalau sumbernya memang punya alamat yang bisa dibuka. */
 const tautanSumber = (t) =>
   t.sumberUrl
-    ? `<a class="tautan-sumber" href="${aman(t.sumberUrl)}" target="_blank" rel="noopener">${ikon('tautan')}Buka sumbernya</a>`
+    ? `<a class="fl-link sg-sumber" href="${aman(t.sumberUrl)}" target="_blank" rel="noopener">${ikon('tautan')}Buka sumbernya</a>`
     : '';
 
 function gambarTindakan() {
   const k = kotaKini();
   const wadah = $('#tindakan');
   if (!k?.langkah?.length) {
-    wadah.innerHTML = `<div class="tindakan-utama st-aman">${ikon('cek')}<div><p>Tidak ada tindakan khusus untuk ${aman(k?.nama ?? 'lokasi ini')} saat ini. Tetap ikuti kabar resmi.</p></div></div>`;
+    wadah.innerHTML = `<div class="fl-callout" data-tone="tip"><span class="fl-callout__icon">${ikon('cek')}</span><div><p>Tidak ada tindakan khusus untuk ${aman(k?.nama ?? 'lokasi ini')} saat ini. Tetap ikuti kabar resmi.</p></div></div>`;
     return;
   }
   const utama = k.langkah.filter((t) => t.prioritas === 1);
   const sisa = k.langkah.filter((t) => t.prioritas !== 1);
-  const kelas = { aman: 'st-aman', waspada: 'st-waspada', siaga: 'st-siaga', bahaya: 'st-bahaya' }[k.status];
+  // Nada callout mengikuti status kota; ikon dan kalimatnya tetap membawa maknanya sendiri.
+  const nada = { aman: 'tip', waspada: 'warn', siaga: 'warn', bahaya: 'danger' }[k.status];
 
   wadah.innerHTML =
-    utama.map((t) => `<div class="tindakan-utama ${kelas}">${ikon(t.ikon)}<div>
+    utama.map((t) => `<div class="fl-callout" data-tone="${nada}"><span class="fl-callout__icon">${ikon(t.ikon)}</span><div>
         <p>${bolehPutus(t.teks)}</p>
         <small>${aman(t.sumber)} · ${aman(t.dasar)}</small>
         ${tautanSumber(t)}
       </div></div>`).join('') +
     (sisa.length
-      ? `<div class="petak">${sisa
-          .map((t, n) => `<button class="petak-sel" type="button" data-n="${n}" aria-expanded="false">${ikon(t.ikon)}<span>${aman(t.ringkas || 'Tindakan')}</span></button>`)
+      ? `<div class="sg-petak">${sisa
+          .map((t, n) => `<button class="sg-petak__sel" type="button" data-n="${n}" aria-expanded="false"><span class="fl-card__icon">${ikon(t.ikon)}</span><span>${aman(t.ringkas || 'Tindakan')}</span></button>`)
           .join('')}</div><div id="tindakan-detail"></div>`
       : '');
 
   if (!sisa.length) return;
   const detail = $('#tindakan-detail');
   const tampilkan = () => {
-    for (const x of $$('.petak-sel', wadah)) x.setAttribute('aria-expanded', Number(x.dataset.n) === tindakanTerbuka);
+    for (const x of $$('.sg-petak__sel', wadah)) x.setAttribute('aria-expanded', Number(x.dataset.n) === tindakanTerbuka);
     const t = sisa[tindakanTerbuka];
     detail.innerHTML = t
-      ? `<div class="tindakan-detail"><p>${bolehPutus(t.teks)}</p>
+      ? `<div class="sg-petak-detail"><p>${bolehPutus(t.teks)}</p>
            <small>${aman(t.sumber)} · ${aman(t.dasar)}</small>${tautanSumber(t)}</div>`
       : '';
     // Petaknya bisa tiga baris; tanpa ini detail terbuka di luar layar.
     if (t) detail.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   };
-  for (const b of $$('.petak-sel', wadah))
+  for (const b of $$('.sg-petak__sel', wadah))
     b.onclick = () => {
       const n = Number(b.dataset.n);
       tindakanTerbuka = tindakanTerbuka === n ? null : n;
@@ -543,14 +560,14 @@ function kartuSigmet(s) {
   if (s.arahTeks && s.kecepatanKnot)
     rinci.push(`bergerak ke ${s.arahTeks} sekitar ${Math.round(s.kecepatanKnot * KNOT_KE_KMJ)} km/jam`);
 
-  return `<div class="tindakan-utama st-siaga">${ikon('pesawat')}<div>
+  return `<div class="fl-callout" data-tone="warn"><span class="fl-callout__icon">${ikon('pesawat')}</span><div>
       <p>Ada peringatan abu vulkanik untuk penerbangan${
         s.gunung ? ` dari ${aman(kapital(s.gunung))}` : ''
       } di wilayah udara ${aman(wilayah)}${rinci.length ? `. ${aman(awalBesar(rinci.join(', ')))}` : ''}.</p>
       <small>SIGMET ${aman(s.nomor)} ${aman(s.fir)}, terbitan kantor meteorologi penerbangan${
         s.sampai ? ` · berlaku sampai ${jamWib(s.sampai)}` : ''
       }</small>
-      ${s.teksAsli ? `<details class="sigmet-asli"><summary>Teks aslinya</summary><pre>${aman(s.teksAsli)}</pre></details>` : ''}
+      ${s.teksAsli ? `<details class="sg-sigmet-asli"><summary>Teks aslinya</summary><pre>${aman(s.teksAsli)}</pre></details>` : ''}
     </div></div>`;
 }
 
@@ -562,27 +579,29 @@ function kartuSigmet(s) {
  * beroperasi" bisa terbit berjarak dua jam. Karena itu jamnya ditulis mencolok dan
  * pembaca yang menilai sendiri mana yang masih berlaku.
  */
-const butirKabar = (k) => `<li>
+const butirKabar = (k) => `<li data-src="news">
+    <div class="fl-feed__meta"><span class="fl-src" data-src="news">Berita</span>
+      <span class="asal">${aman(k.sumber || 'sumber tidak tertulis')}</span><span>${jamWib(k.waktu)} · ${lalu(k.waktu)}</span></div>
+    <h4><a href="${aman(k.tautan)}" target="_blank" rel="noopener">${aman(k.judul)}</a></h4>
+  </li>`;
+// Versi ringkas untuk di dalam kartu bandara: satu judul, tanpa lencana.
+const butirKabarKecil = (k) => `<div class="sg-kabar-satu">
     <a href="${aman(k.tautan)}" target="_blank" rel="noopener">${aman(k.judul)}</a>
     <small>${aman(k.sumber || 'sumber tidak tertulis')} · ${jamWib(k.waktu)} · ${lalu(k.waktu)}</small>
-  </li>`;
+  </div>`;
 
 function kartuBandara(b) {
   const m = b.metar;
   const rinci = [pandangTeks(m?.pandang), ...(m?.cuaca || [])].filter(Boolean);
-  const warna = b.status ? `var(--h-${b.status})` : 'var(--ink-3)';
-  return `<li class="bandara-sel">
-      <div class="bandara-atas">
-        <span class="titik-st" style="background:${warna}"></span>
-        <b>${aman(b.nama)}</b><span class="bandara-kode">${aman(b.iata)}</span>
-      </div>
-      <p class="bandara-tempat">${aman(b.kota)} · ${b.jarakKm} km dari kawah</p>
-      ${b.status ? lencana(b.status, b.label) : `<span class="lencana lencana-sepi">${ikon('jam')}${aman(b.label)}</span>`}
-      ${rinci.length ? `<p class="bandara-cuaca">${aman(awalBesar(rinci.join(', ')))}.</p>` : ''}
-      <small class="bandara-kaki">${
+  return `<li class="fl-card sg-bandara">
+      <div class="sg-bandara__atas"><h4>${aman(b.nama)}</h4><span class="fl-tag fl-tag--outline">${aman(b.iata)}</span></div>
+      <p class="sg-bandara__tempat">${aman(b.kota)} · ${b.jarakKm} km dari kawah</p>
+      ${b.status ? lencana(b.status, b.label) : `<span class="fl-fresh" data-age="stale">${aman(b.label)}</span>`}
+      ${rinci.length ? `<p class="sg-bandara__cuaca">${aman(awalBesar(rinci.join(', ')))}.</p>` : ''}
+      <small class="sg-bandara__kaki">${
         m?.waktu ? `Laporan ${jamWib(m.waktu)}` : 'Belum ada laporan terbaru'
-      } · <a href="https://aviationweather.gov/data/metar/?id=${aman(b.icao)}" target="_blank" rel="noopener">METAR ${aman(b.icao)}</a></small>
-      ${b.kabar?.length ? `<ul class="bandara-kabar">${b.kabar.map(butirKabar).join('')}</ul>` : ''}
+      } · <a class="fl-link" href="https://aviationweather.gov/data/metar/?id=${aman(b.icao)}" target="_blank" rel="noopener">METAR ${aman(b.icao)}</a></small>
+      ${b.kabar?.length ? butirKabarKecil(b.kabar[0]) : ''}
     </li>`;
 }
 
@@ -595,12 +614,12 @@ function gambarBandara() {
   // Gagal ambil dan "tidak ada peringatan" adalah dua hal berbeda. Menyamakannya
   // berarti menyajikan kesenyapan sebagai kabar baik, dan itu yang paling berbahaya.
   if (D.sigmetGagal)
-    bagian.push(`<div class="tindakan-utama st-waspada">${ikon('info')}<div>
+    bagian.push(`<div class="fl-callout" data-tone="warn"><span class="fl-callout__icon">${ikon('info')}</span><div>
         <p>Peringatan abu untuk penerbangan gagal diambil pada pembaruan terakhir.</p>
         <small>Kosongnya bagian ini bukan berarti tidak ada peringatan.</small>
       </div></div>`);
   else if (!sig.length)
-    bagian.push(`<div class="tindakan-utama st-aman">${ikon('cek')}<div>
+    bagian.push(`<div class="fl-callout" data-tone="tip"><span class="fl-callout__icon">${ikon('cek')}</span><div>
         <p>Tidak ada peringatan abu vulkanik yang sedang berlaku untuk wilayah udara Jakarta.</p>
         <small>Diperiksa ${lalu(D.dibuat)}</small>
       </div></div>`);
@@ -608,30 +627,33 @@ function gambarBandara() {
 
   const kabar = D.kabarBandara || [];
   if (D.kabarBandaraGagal)
-    bagian.push(`<div class="tindakan-utama st-waspada">${ikon('info')}<div>
+    bagian.push(`<div class="fl-callout" data-tone="warn"><span class="fl-callout__icon">${ikon('info')}</span><div>
         <p>Kabar penutupan dan pembukaan bandara gagal diambil pada pembaruan terakhir.</p>
         <small>Kosongnya bagian ini bukan berarti semua bandara beroperasi normal.</small>
       </div></div>`);
-  else if (kabar.length)
-    bagian.push(`<div class="kabar-bandara">
+  else if (!kabar.length)
+    bagian.push(`<div class="fl-callout" data-tone="note"><span class="fl-callout__icon">${ikon('info')}</span><div>
+        <p>Tidak ada pemberitaan penutupan atau pembukaan bandara akibat abu dalam 3 hari terakhir di sumber yang dipantau.</p>
+        <small>Itu bukan jaminan semua bandara beroperasi normal. Untuk jadwal penerbanganmu, tanya maskapai.</small>
+      </div></div>`);
+  else
+    bagian.push(`<div class="sg-kabar-bandara">
         <h4>Kabar penutupan &amp; pembukaan</h4>
-        <p class="kabar-bandara-sub">Pengumuman resmi AirNav Indonesia dan Kemenhub seperti diberitakan media.
-          <b>Perhatikan jamnya</b> — status bandara bisa berubah beberapa kali dalam sehari.</p>
-        <ul class="bandara-kabar">${kabar.map(butirKabar).join('')}</ul>
+        <p>Pengumuman resmi AirNav Indonesia dan Kemenhub seperti diberitakan media.
+          <b>Perhatikan jamnya</b>, karena status bandara bisa berubah beberapa kali dalam sehari.</p>
+        <ul class="fl-feed sg-feed">${kabar.map(butirKabar).join('')}</ul>
       </div>`);
 
-  if (daftar.length) bagian.push(`<ul class="bandara-petak">${daftar.map(kartuBandara).join('')}</ul>`);
+  if (daftar.length) bagian.push(`<ul class="sg-bandara-grid">${daftar.map(kartuBandara).join('')}</ul>`);
 
-  bagian.push(`<div class="cap bandara-catatan">${ikon('info')}<div>
-      <b>Lencana hijau di atas bukan berarti bandaranya buka.</b>
-      Ia cuma bilang tidak ada abu di laporan cuaca bandara itu. Keputusan buka atau tutup
+  bagian.push(`<div class="fl-callout sg-bandara-catatan" data-tone="note"><span class="fl-callout__icon">${ikon('info')}</span><div>
+      <h3>Lencana hijau bukan berarti bandaranya buka</h3>
+      <p>Ia cuma bilang tidak ada abu di laporan cuaca bandara itu. Keputusan buka atau tutup
       diumumkan lewat NOTAM oleh AirNav Indonesia; salurannya tidak terbuka gratis, jadi
-      halaman ini membacanya lewat pemberitaan — bukan langsung dari sumbernya, dan bisa
-      tertinggal. Untuk jadwal penerbanganmu, tanya maskapai.
-      <span class="bandara-tautan">
-        <a class="tautan-sumber" href="https://www.airnavindonesia.co.id/" target="_blank" rel="noopener">${ikon('tautan')}AirNav Indonesia</a>
-        <a class="tautan-sumber" href="https://injourneyairports.id/" target="_blank" rel="noopener">${ikon('tautan')}InJourney Airports</a>
-      </span>
+      halaman ini membacanya lewat pemberitaan, bukan langsung dari sumbernya, dan bisa
+      tertinggal. Untuk jadwal penerbanganmu, tanya maskapai.</p>
+      <p><a class="fl-link sg-sumber" href="https://www.airnavindonesia.co.id/" target="_blank" rel="noopener">${ikon('tautan')}AirNav Indonesia</a>
+         <a class="fl-link sg-sumber" href="https://injourneyairports.id/" target="_blank" rel="noopener">${ikon('tautan')}InJourney Airports</a></p>
     </div></div>`);
 
   wadah.innerHTML = bagian.join('');
@@ -644,22 +666,28 @@ function gambarBandara() {
 function kabarLokasi(teks, nada, aksi) {
   const e = $('#lokasi-kabar');
   e.hidden = !teks;
-  e.dataset.nada = nada || '';
+  e.classList.toggle('fl-alert--error', nada === 'galat');
   if (!teks) return;
-  e.innerHTML = `${ikon(nada === 'galat' ? 'awas' : 'pin')}<span>${aman(teks)}</span>`;
+  e.innerHTML = `${ikon(nada === 'galat' ? 'awas' : 'pin')}<div><p>${aman(teks)}</p></div>`;
   if (aksi) {
     const b = html('button', { type: 'button' }, aksi.label);
     b.onclick = aksi.fn;
-    e.querySelector('span').append(b);
+    e.querySelector('p').append(b);
   }
 }
 
+/** Tombol lokasi: '' (diam), 'memuat' (titik melompat milik kit), 'aktif' (menyala). */
+function keadaanTombolLokasi(keadaan) {
+  const b = $('#tombol-lokasi');
+  b.classList.toggle('is-loading', keadaan === 'memuat');
+  b.setAttribute('aria-pressed', keadaan === 'aktif');
+}
+
 async function pakaiLokasi() {
-  const tombol = $('#tombol-lokasi');
   if (!navigator.geolocation)
     return kabarLokasi('Peramban ini tidak mendukung deteksi lokasi. Pilih kota terdekat secara manual.', 'galat');
 
-  tombol.dataset.keadaan = 'memuat';
+  keadaanTombolLokasi('memuat');
   kabarLokasi('Meminta izin lokasi…');
   try {
     const pos = await new Promise((ok, gagal) =>
@@ -676,7 +704,7 @@ async function pakaiLokasi() {
     lokasiSaya = await r.json();
     kotaTerpilih = 'lokasi-saya';
     localStorage.setItem('siaga.kota', 'lokasi-saya');
-    tombol.dataset.keadaan = 'aktif';
+    keadaanTombolLokasi('aktif');
     gambarPilihKota();
     gantiKota();
     kabarLokasi('Memakai lokasi perangkat, dibulatkan ke sekitar 1 km. Koordinat tidak disimpan.', '', {
@@ -684,7 +712,7 @@ async function pakaiLokasi() {
       fn: lepasLokasi,
     });
   } catch (e) {
-    tombol.dataset.keadaan = '';
+    keadaanTombolLokasi('');
     kabarLokasi(
       e.code === 1 ? 'Izin lokasi ditolak. Pilih kota terdekat secara manual.'
       : e.code === 2 ? 'Lokasi tidak bisa ditentukan perangkat. Pilih kota terdekat secara manual.'
@@ -699,7 +727,7 @@ function lepasLokasi() {
   lokasiSaya = null;
   kotaTerpilih = D.kota[0]?.kotaId;
   localStorage.setItem('siaga.kota', kotaTerpilih);
-  $('#tombol-lokasi').dataset.keadaan = '';
+  keadaanTombolLokasi('');
   kabarLokasi(null);
   gambarPilihKota();
   gantiKota();
@@ -732,8 +760,23 @@ function juring(cx, cy, r, arahDeg, bukaDeg) {
   return `M${cx} ${cy} L${x1} ${y1} A${r} ${r} 0 0 1 ${x2} ${y2} Z`;
 }
 
-const RONA = { 850: '#F6C98A', 700: '#F0A053', 500: '#E4700C', 250: '#B01D14' };
-const warnaRona = (hPa) => RONA[hPa] || '#E4700C';
+// Empat lapisan angin memakai seri kategorikal kit (--chart-n): rona yang berbeda untuk
+// tiap ketinggian, jadi kerucut yang bertumpuk tetap terbaca, dan label menyebut
+// ketinggiannya. Berupa var() supaya ikut berganti dengan tema.
+const RONA = { 850: 'var(--chart-2)', 700: 'var(--chart-3)', 500: 'var(--chart-1)', 250: 'var(--chart-5)' };
+const warnaRona = (hPa) => RONA[hPa] || 'var(--chart-1)';
+
+/** Penanda kota: bentuknya mengikuti tingkat (bulat, segitiga, belah ketupat, segi delapan), sama dengan chip status. */
+function penanda(status, x, y, r, atr) {
+  const t = TINGKAT[status] || 1;
+  if (t === 1) return el('circle', { cx: x, cy: y, r, ...atr });
+  const titik = {
+    2: [[0, -1.15], [1.05, 0.85], [-1.05, 0.85]],
+    3: [[0, -1.3], [1.3, 0], [0, 1.3], [-1.3, 0]],
+    4: Array.from({ length: 8 }, (_, i) => [1.12 * Math.cos(((22.5 + i * 45) * Math.PI) / 180), 1.12 * Math.sin(((22.5 + i * 45) * Math.PI) / 180)]),
+  }[t];
+  return el('polygon', { points: titik.map(([a, b]) => `${(x + a * r).toFixed(1)},${(y + b * r).toFixed(1)}`).join(' '), 'stroke-linejoin': 'round', ...atr });
+}
 
 function gambarSaringLapisan() {
   const wadah = $('#saring-lapisan');
@@ -743,7 +786,7 @@ function gambarSaringLapisan() {
   if (!lapisanAktif.size) lap.forEach((l) => lapisanAktif.add(l.hPa));
 
   for (const l of lap) {
-    const b = html('button', { class: 'cip', type: 'button', 'aria-pressed': lapisanAktif.has(l.hPa) });
+    const b = html('button', { class: 'sg-chip', type: 'button', 'aria-pressed': lapisanAktif.has(l.hPa) });
     b.innerHTML = `<i style="background:${warnaRona(l.hPa)}"></i>${l.label} · ~${l.kmKira} km`;
     b.onclick = () => {
       lapisanAktif.has(l.hPa) ? lapisanAktif.delete(l.hPa) : lapisanAktif.add(l.hPa);
@@ -767,24 +810,24 @@ function gambarPeta() {
   const fs = (px) => +(px * sk).toFixed(1);
   const g = D.gunung;
   const [gx, gy] = p.xy(g.lon, g.lat);
-  const svg = el('svg', { class: 'peta', viewBox: `0 0 ${p.lebar} ${p.tinggi}`, role: 'img',
+  const svg = el('svg', { class: 'sg-peta', viewBox: `0 0 ${p.lebar} ${p.tinggi}`, role: 'img',
     'aria-label': `Peta Selat Sunda: posisi ${g.nama}, arah sebaran abu, dan status ${D.kota.length} kota.` });
 
-  svg.append(el('rect', { width: p.lebar, height: p.tinggi, fill: 'var(--laut)' }));
+  svg.append(el('rect', { width: p.lebar, height: p.tinggi, fill: 'var(--sg-laut)' }));
 
   if (garisPantai)
     for (const baris of garisPantai.lines) {
       const d = baris.map(([lo, la], i) => `${i ? 'L' : 'M'}${p.xy(lo, la).map((v) => v.toFixed(1)).join(' ')}`).join('');
-      svg.append(el('path', { d: d + 'Z', fill: 'var(--darat)', stroke: 'var(--grid)', 'stroke-width': 1 }));
+      svg.append(el('path', { d: d + 'Z', fill: 'var(--sg-darat)', stroke: 'var(--color-border-hover)', 'stroke-width': 1 }));
     }
 
   for (const km of [50, 100, 200, 300]) {
     const r = p.km(km);
-    svg.append(el('circle', { cx: gx, cy: gy, r, fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1.2, 'stroke-dasharray': '5 5' }));
+    svg.append(el('circle', { cx: gx, cy: gy, r, fill: 'none', stroke: 'var(--color-border-hover)', 'stroke-width': 1.2, 'stroke-dasharray': '5 5' }));
     const a = (215 * Math.PI) / 180;
     const lx = gx + r * Math.cos(a), ly = gy + r * Math.sin(a);
     if (lx > 26 && ly < p.tinggi - 8)
-      svg.append(el('text', { x: lx, y: ly, 'text-anchor': 'middle', fill: 'var(--ink-3)', 'font-size': fs(11), 'font-weight': 600, 'paint-order': 'stroke', stroke: 'var(--laut)', 'stroke-width': fs(3) }, `${km} km`));
+      svg.append(el('text', { x: lx, y: ly, 'text-anchor': 'middle', fill: 'var(--color-light)', 'font-size': fs(11), 'font-weight': 700, 'paint-order': 'stroke', stroke: 'var(--sg-laut)', 'stroke-width': fs(3) }, `${km} km`));
   }
 
   const lapisan = (D.angin?.lapisan || []).filter((l) => lapisanAktif.has(l.hPa));
@@ -819,8 +862,8 @@ function gambarPeta() {
     const dipilih = k.kotaId === kotaTerpilih;
     const t = el('g', { style: 'cursor:pointer', tabindex: '0', role: 'button',
       'aria-label': `${k.nama}, ${k.jarakKm} km, status ${LABEL_STATUS[k.status]}` });
-    if (dipilih) t.append(el('circle', { cx: x, cy: y, r: fs(11), fill: 'none', stroke: 'var(--ink)', 'stroke-width': fs(1.5) }));
-    t.append(el('circle', { cx: x, cy: y, r: fs(dipilih ? 6.5 : 5), fill: warnaStatus(k.status), stroke: 'var(--surface)', 'stroke-width': fs(1.8) }));
+    if (dipilih) t.append(el('circle', { cx: x, cy: y, r: fs(12), fill: 'none', stroke: 'var(--color-ink)', 'stroke-width': fs(1.5) }));
+    t.append(penanda(k.status, x, y, fs(dipilih ? 7 : 5.6), { fill: warnaStatus(k.status), stroke: 'var(--surface)', 'stroke-width': fs(1.8) }));
 
     const lw = k.nama.length * fs(7.3) + fs(10);
     for (const c of [
@@ -833,8 +876,8 @@ function gambarPeta() {
       const kk = { x1, x2: x1 + lw, y1: y + c.dy - fs(13), y2: y + c.dy + fs(6) };
       if (bentrok(kk) && !dipilih) continue;
       kotak.push(kk);
-      t.append(el('text', { x: x + c.dx, y: y + c.dy, 'text-anchor': c.anchor, fill: 'var(--ink)',
-        'font-size': fs(12), 'font-weight': dipilih ? 800 : 600, 'paint-order': 'stroke',
+      t.append(el('text', { x: x + c.dx, y: y + c.dy, 'text-anchor': c.anchor, fill: 'var(--color-ink)',
+        'font-size': fs(12), 'font-weight': dipilih ? 800 : 700, 'paint-order': 'stroke',
         stroke: 'var(--surface)', 'stroke-width': fs(3.5) }, k.nama));
       break;
     }
@@ -853,35 +896,33 @@ function gambarPeta() {
 
   const r = D.ringkas;
   if (r?.radiusLaranganKm)
-    svg.append(el('circle', { cx: gx, cy: gy, r: Math.max(p.km(r.radiusLaranganKm), fs(3)), fill: 'var(--h-bahaya)', 'fill-opacity': 0.35, stroke: 'var(--h-bahaya)', 'stroke-width': 1.5 }));
-  svg.append(el('path', { d: `M${gx} ${gy - fs(10)} L${gx + fs(9)} ${gy + fs(7)} L${gx - fs(9)} ${gy + fs(7)} Z`, fill: 'var(--ink)', stroke: 'var(--surface)', 'stroke-width': fs(1.5) }));
-  svg.append(el('text', { x: gx, y: gy + fs(22), 'text-anchor': 'middle', fill: 'var(--ink)', 'font-size': fs(12.5), 'font-weight': 800, 'paint-order': 'stroke', stroke: 'var(--surface)', 'stroke-width': fs(3.5) }, g.nama));
+    svg.append(el('circle', { cx: gx, cy: gy, r: Math.max(p.km(r.radiusLaranganKm), fs(3)), fill: 'var(--level-4)', 'fill-opacity': 0.35, stroke: 'var(--level-4)', 'stroke-width': 1.5 }));
+  svg.append(el('path', { d: `M${gx} ${gy - fs(10)} L${gx + fs(9)} ${gy + fs(7)} L${gx - fs(9)} ${gy + fs(7)} Z`, fill: 'var(--color-ink)', stroke: 'var(--surface)', 'stroke-width': fs(1.5) }));
+  svg.append(el('text', { x: gx, y: gy + fs(22), 'text-anchor': 'middle', fill: 'var(--color-ink)', 'font-size': fs(12.5), 'font-weight': 800, 'paint-order': 'stroke', stroke: 'var(--surface)', 'stroke-width': fs(3.5) }, g.nama));
 
   $('#peta-wadah').replaceChildren(svg);
-  $('#peta-keterangan').innerHTML = Object.entries(LABEL_STATUS)
-    .map(([s, l]) => `<span><i style="background:${warnaStatus(s)}"></i>${l}</span>`).join('');
+  $('#peta-keterangan').innerHTML = Object.keys(LABEL_STATUS).map((s) => lencana(s)).join('');
   $('#peta-kaki').textContent = kakiPeta();
 
   gambarTabelKota();
 }
 
 /** Padanan tabel untuk peta: identitas tidak pernah lewat warna saja. */
+/** Padanan tabel untuk peta: identitas tidak pernah lewat warna saja. */
 function gambarTabelKota() {
   const tabel = $('#tabel-kota');
-  tabel.innerHTML = `<table class="data">
-    <thead><tr><th>Kota</th><th>Jarak</th><th>Arah</th><th>ISPU</th><th>Status</th></tr></thead>
+  tabel.innerHTML = `<div class="fl-tablewrap"><table class="fl-dt fl-dt--stack">
+    <thead><tr><th>Kota</th><th class="num">Jarak</th><th>Arah</th><th class="num">ISPU</th><th>Status</th></tr></thead>
     <tbody>${D.kota.map((k) => `
-      <tr data-kota="${aman(k.kotaId)}" data-pilih="${k.kotaId === kotaTerpilih}" tabindex="0" role="button"
+      <tr data-kota="${aman(k.kotaId)}" data-pilih="${k.kotaId === kotaTerpilih}" ${k.kotaId === kotaTerpilih ? 'aria-current="true"' : ''} tabindex="0" role="button"
           aria-label="Pilih ${aman(k.nama)}">
-        <td>${aman(k.nama)}</td>
-        <td>${k.jarakKm} km</td>
-        <td>${aman(k.arahMata)}</td>
-        <td>${k.ispu?.nilai ?? '—'}</td>
-        <td><span class="cip-status st-${k.status}">
-          <svg viewBox="0 0 24 24" class="ikon" aria-hidden="true"><use href="#${IKON_STATUS[k.status]}"/></svg>${LABEL_STATUS[k.status]}
-        </span></td>
+        <td data-label="Kota">${aman(k.nama)}</td>
+        <td class="num" data-label="Jarak">${k.jarakKm} km</td>
+        <td data-label="Arah">${aman(k.arahMata)}</td>
+        <td class="num" data-label="ISPU">${k.ispu?.nilai ?? '—'}</td>
+        <td data-label="Status">${lencana(k.status)}</td>
       </tr>`).join('')}
-    </tbody></table>`;
+    </tbody></table></div>`;
 
   for (const tr of $$('tr[data-kota]', tabel)) {
     const pilih = () => {
@@ -934,11 +975,12 @@ function gambarWindy() {
   if (!windySetuju) {
     saring.hidden = true;
     wadah.innerHTML = '';
-    wadah.append(html('div', { class: 'windy-catatan' },
-      `${ikon('awas')}<div><b>Lapisan ini dimuat dari windy.com.</b> Kalau kamu membukanya, peramban kamu
-       menghubungi server mereka dan mereka bisa melihat alamat IP kamu. Peta bawaan Siaga tidak memanggil
-       siapa pun. Data Windy berasal dari model ECMWF dan CAMS — perkiraan, bukan pengamatan resmi PVMBG.
-       <br><button type="button" id="windy-setuju">Muat peta Windy</button></div>`));
+    wadah.append(html('div', { class: 'fl-alert fl-alert--warning sg-windy-catatan' },
+      `${ikon('awas')}<div><strong>Lapisan ini dimuat dari windy.com</strong>
+       <p>Kalau kamu membukanya, peramban kamu menghubungi server mereka dan mereka bisa melihat alamat IP kamu.
+       Peta bawaan Siaga tidak memanggil siapa pun. Data Windy berasal dari model ECMWF dan CAMS: perkiraan,
+       bukan pengamatan resmi PVMBG.</p>
+       <button class="fl-btn fl-btn--sm" type="button" id="windy-setuju">Muat peta Windy</button></div>`));
     $('#windy-setuju').onclick = () => {
       windySetuju = true;
       localStorage.setItem('siaga.windy', 'ya');
@@ -950,14 +992,14 @@ function gambarWindy() {
   saring.hidden = false;
   saring.innerHTML = '';
   for (const o of WINDY_OVERLAY) {
-    const b = html('button', { class: 'cip', type: 'button', 'aria-pressed': windyOverlay === o.kunci, title: o.satuan });
+    const b = html('button', { class: 'sg-chip', type: 'button', 'aria-pressed': windyOverlay === o.kunci, title: o.satuan });
     b.textContent = o.nama;
     b.onclick = () => { windyOverlay = o.kunci; gambarWindy(); };
     saring.append(b);
   }
   if (windyOverlay === 'wind')
     for (const l of WINDY_LEVEL) {
-      const b = html('button', { class: 'cip', type: 'button', 'aria-pressed': windyLevel === l.kunci });
+      const b = html('button', { class: 'sg-chip', type: 'button', 'aria-pressed': windyLevel === l.kunci });
       b.textContent = l.nama;
       b.onclick = () => { windyLevel = l.kunci; gambarWindy(); };
       saring.append(b);
@@ -971,8 +1013,8 @@ function gambarWindy() {
 
 function alihPeta(keWindy) {
   petaWindy = keWindy;
-  $('#alih-siaga').setAttribute('aria-pressed', !keWindy);
-  $('#alih-windy').setAttribute('aria-pressed', keWindy);
+  $('#alih-siaga').checked = !keWindy;
+  $('#alih-windy').checked = keWindy;
   $('#peta-wadah').hidden = keWindy;
   $('#peta-keterangan').hidden = keWindy;
   $('#saring-lapisan').hidden = keWindy;
@@ -993,7 +1035,7 @@ function gambarAngin() {
   const lap = D.angin?.lapisan || [];
   const wadah = $('#angin-wadah');
   if (!lap.length) {
-    wadah.innerHTML = '<p style="padding:24px;color:var(--ink-3)">Data angin tidak tersedia saat ini.</p>';
+    wadah.innerHTML = '<p class="sg-kosong" style="padding:24px">Data angin tidak tersedia saat ini.</p>';
     return;
   }
   const W = lebarWadah('#angin-wadah');
@@ -1002,10 +1044,10 @@ function gambarAngin() {
   const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, style: 'width:100%;height:auto', role: 'img',
     'aria-label': 'Arah dan kecepatan angin pada empat ketinggian di atas kawah.' });
 
-  for (const f of [0.34, 0.67, 1]) svg.append(el('circle', { cx, cy, r: R * f, fill: 'none', stroke: 'var(--grid)', 'stroke-width': 1 }));
+  for (const f of [0.34, 0.67, 1]) svg.append(el('circle', { cx, cy, r: R * f, fill: 'none', stroke: 'var(--color-border-hover)', 'stroke-width': 1 }));
   for (const [i, m] of ['U', 'T', 'S', 'B'].entries()) {
     const a = ((i * 90 - 90) * Math.PI) / 180;
-    svg.append(el('text', { x: cx + (R + 18) * Math.cos(a), y: cy + (R + 18) * Math.sin(a) + 5, 'text-anchor': 'middle', fill: 'var(--ink-3)', 'font-size': 13, 'font-weight': 700 }, m));
+    svg.append(el('text', { x: cx + (R + 18) * Math.cos(a), y: cy + (R + 18) * Math.sin(a) + 5, 'text-anchor': 'middle', fill: 'var(--color-light)', 'font-size': 13, 'font-weight': 800 }, m));
   }
 
   const maks = Math.max(...lap.map((l) => l.kecepatanKmj), 1);
@@ -1028,11 +1070,11 @@ function gambarAngin() {
     dipakai.push({ x: lx, y: ly });
     if (Math.hypot(lx - x, ly - y) > 30)
       g.append(el('line', { x1: x, y1: y, x2: lx, y2: ly - 4, stroke: warnaRona(l.hPa), 'stroke-width': 1, 'stroke-opacity': 0.5 }));
-    g.append(el('text', { x: lx, y: ly, 'text-anchor': 'middle', fill: 'var(--ink)', 'font-size': 12.5, 'font-weight': 700, 'paint-order': 'stroke', stroke: 'var(--surface)', 'stroke-width': 3.5 }, `~${l.kmKira} km · ${Math.round(l.kecepatanKmj)} km/j`));
+    g.append(el('text', { x: lx, y: ly, 'text-anchor': 'middle', fill: 'var(--color-ink)', 'font-size': 12.5, 'font-weight': 800, 'paint-order': 'stroke', stroke: 'var(--surface)', 'stroke-width': 3.5 }, `~${l.kmKira} km · ${Math.round(l.kecepatanKmj)} km/j`));
     svg.append(g);
   }
-  svg.append(el('circle', { cx, cy, r: 5, fill: 'var(--ink)' }));
-  svg.append(el('text', { x: cx, y: H - 8, 'text-anchor': 'middle', fill: 'var(--ink-3)', 'font-size': 11.5, 'font-weight': 600 }, 'titik tengah = kawah'));
+  svg.append(el('circle', { cx, cy, r: 5, fill: 'var(--color-ink)' }));
+  svg.append(el('text', { x: cx, y: H - 8, 'text-anchor': 'middle', fill: 'var(--color-light)', 'font-size': 11.5, 'font-weight': 700 }, 'titik tengah = kawah'));
   wadah.replaceChildren(svg);
 }
 
@@ -1048,7 +1090,7 @@ function gambarUdara() {
   const d = (k?.deretUdara || []).filter((t) => t.pm2_5 != null);
   const wadah = $('#udara-wadah');
   if (d.length < 2) {
-    wadah.innerHTML = '<p style="padding:24px;color:var(--ink-3)">Deret kualitas udara untuk lokasi ini tidak tersedia.</p>';
+    wadah.innerHTML = '<p class="sg-kosong" style="padding:24px">Deret kualitas udara untuk lokasi ini tidak tersedia.</p>';
     return;
   }
   $('#udara-sub').textContent = `PM2.5 di ${k.nama} selama 24 jam terakhir. Garis putus-putus adalah batas kategori ISPU resmi.`;
@@ -1065,19 +1107,19 @@ function gambarUdara() {
   for (const b of PATAH_PM25) {
     if (b.nilai > maks) continue;
     const y = Y(b.nilai);
-    svg.append(el('line', { x1: ml, x2: W - mr, y1: y, y2: y, stroke: 'var(--grid)', 'stroke-width': 1, 'stroke-dasharray': '4 4' }));
+    svg.append(el('line', { x1: ml, x2: W - mr, y1: y, y2: y, stroke: 'var(--color-border-hover)', 'stroke-width': 1, 'stroke-dasharray': '4 4' }));
     // Kalau garisnya dekat tepi atas, keterangannya ditaruh di bawah garis —
     // di atas garis ia terpotong bingkai.
     const yTeks = y - 5 < mt + 10 ? y + 13 : y - 5;
-    svg.append(el('text', { x: W - mr, y: yTeks, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 11.5, 'font-weight': 600 }, `${b.nama} · ${b.nilai}`));
+    svg.append(el('text', { x: W - mr, y: yTeks, 'text-anchor': 'end', fill: 'var(--color-mid)', 'font-size': 11.5, 'font-weight': 700, 'paint-order': 'stroke', stroke: 'var(--surface)', 'stroke-width': 4, 'stroke-linejoin': 'round' }, `${b.nama} · ${b.nilai}`));
   }
   for (const v of [0, Math.round(maks / 2), Math.round(maks)])
-    svg.append(el('text', { x: ml - 8, y: Y(v) + 4, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 11.5 }, String(v)));
+    svg.append(el('text', { x: ml - 8, y: Y(v) + 4, 'text-anchor': 'end', fill: 'var(--color-light)', 'font-size': 11.5 }, String(v)));
 
   const titik = d.map((t, i) => [X(i), Y(t.pm2_5)]);
   const garis = titik.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join('');
-  svg.append(el('path', { d: `${garis}L${X(d.length - 1)} ${mt + ph}L${ml} ${mt + ph}Z`, fill: 'var(--accent)', 'fill-opacity': 0.1 }));
-  svg.append(el('path', { d: garis, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  svg.append(el('path', { d: `${garis}L${X(d.length - 1)} ${mt + ph}L${ml} ${mt + ph}Z`, fill: 'var(--chart-1)', 'fill-opacity': 0.14 }));
+  svg.append(el('path', { d: garis, fill: 'none', stroke: 'var(--chart-1)', 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
 
   // Deretnya memang urut dari lama ke baru, tapi tanpa tanggal label "14.00"
   // di kiri dan "13.00" di kanan terbaca seolah mundur. Hari ikut ditulis,
@@ -1090,19 +1132,19 @@ function gambarUdara() {
   const tandaX = [0, Math.round((d.length - 1) / 2), d.length - 1];
   for (const [n, i] of tandaX.entries()) {
     const anchor = n === 0 ? 'start' : n === tandaX.length - 1 ? 'end' : 'middle';
-    svg.append(el('line', { x1: X(i), x2: X(i), y1: mt + ph, y2: mt + ph + 4, stroke: 'var(--grid)', 'stroke-width': 1 }));
-    svg.append(el('text', { x: X(i), y: H - 16, 'text-anchor': anchor, fill: 'var(--ink-3)', 'font-size': 11 }, labelWaktu(d[i].t)));
+    svg.append(el('line', { x1: X(i), x2: X(i), y1: mt + ph, y2: mt + ph + 4, stroke: 'var(--color-border-hover)', 'stroke-width': 1 }));
+    svg.append(el('text', { x: X(i), y: H - 16, 'text-anchor': anchor, fill: 'var(--color-light)', 'font-size': 11 }, labelWaktu(d[i].t)));
   }
-  svg.append(el('text', { x: ml, y: H - 3, fill: 'var(--ink-3)', 'font-size': 10.5, 'font-weight': 600 }, 'lebih lama'));
-  svg.append(el('text', { x: W - mr, y: H - 3, 'text-anchor': 'end', fill: 'var(--ink-3)', 'font-size': 10.5, 'font-weight': 600 }, 'sekarang →'));
+  svg.append(el('text', { x: ml, y: H - 3, fill: 'var(--color-light)', 'font-size': 10.5, 'font-weight': 700 }, 'lebih lama'));
+  svg.append(el('text', { x: W - mr, y: H - 3, 'text-anchor': 'end', fill: 'var(--color-light)', 'font-size': 10.5, 'font-weight': 700 }, 'sekarang →'));
 
   const sorot = el('g', { opacity: 0 });
-  const bidik = el('line', { y1: mt, y2: mt + ph, stroke: 'var(--ink-3)', 'stroke-width': 1 });
-  const bulat = el('circle', { r: 5, fill: 'var(--accent)', stroke: 'var(--surface)', 'stroke-width': 2 });
+  const bidik = el('line', { y1: mt, y2: mt + ph, stroke: 'var(--color-light)', 'stroke-width': 1 });
+  const bulat = el('circle', { r: 5.5, fill: 'var(--chart-1)', stroke: 'var(--surface)', 'stroke-width': 2 });
   const LT = 146;
-  const kotakT = el('rect', { rx: 7, fill: 'var(--ink)', height: 38, width: LT });
-  const teks1 = el('text', { fill: 'var(--bg)', 'font-size': 13, 'font-weight': 700 });
-  const teks2 = el('text', { fill: 'var(--bg)', 'font-size': 11.5, opacity: 0.75 });
+  const kotakT = el('rect', { rx: 10, fill: 'var(--color-charcoal)', height: 38, width: LT });
+  const teks1 = el('text', { fill: 'var(--color-cream-fixed)', 'font-size': 13, 'font-weight': 800 });
+  const teks2 = el('text', { fill: 'var(--color-cream-fixed)', 'font-size': 11.5, opacity: 0.78 });
   sorot.append(bidik, kotakT, teks1, teks2, bulat);
   svg.append(sorot);
 
@@ -1140,6 +1182,7 @@ function jenisPos(p) {
   return p.kanal === 'berita' ? 'berita' : 'sosial';
 }
 const LABEL_JENIS = { resmi: 'Resmi', berita: 'Berita', sosial: 'Perbincangan' };
+const SRC = { resmi: 'official', berita: 'news', sosial: 'social' }; // nama jenis di .fl-src kit
 
 /**
  * Linimasa satu aliran, terbaru di atas. Resmi dan perbincangan tidak dipisah
@@ -1155,15 +1198,15 @@ function gambarKabar() {
 
   const peringatan =
     tabKabar === 'resmi'
-      ? `<div class="awas-verifikasi" style="background:var(--h-aman-bg);color:var(--h-aman)">${ikon('perisai')}<span>Unggahan dari akun lembaga resmi. Tetap buka tautannya untuk memastikan.</span></div>`
-      : `<div class="awas-verifikasi">${ikon('awas')}<span><b>Belum diverifikasi.</b> Butir bertanda <b>Berita</b> adalah liputan media — menyebut sebuah lembaga bukan berarti pernyataan resmi lembaga itu. Butir <b>Perbincangan</b> adalah unggahan yang sedang ramai. Cocokkan dulu dengan laporan PVMBG sebelum meneruskannya.</span></div>`;
+      ? `<div class="fl-alert fl-alert--success sg-catatan-kabar">${ikon('perisai')}<div><p>Unggahan dari akun lembaga resmi. Tetap buka tautannya untuk memastikan.</p></div></div>`
+      : `<div class="fl-alert fl-alert--warning sg-catatan-kabar">${ikon('awas')}<div><strong>Belum diverifikasi</strong><p>Butir bertanda <b>Berita</b> adalah liputan media: menyebut sebuah lembaga bukan berarti pernyataan resmi lembaga itu. Butir <b>Perbincangan</b> adalah unggahan yang sedang ramai. Cocokkan dulu dengan laporan PVMBG sebelum meneruskannya.</p></div></div>`;
 
   const angka = (n) => (n == null ? null : n >= 1000 ? `${(n / 1000).toFixed(1)} rb` : String(n));
 
   $('#isi-kabar').innerHTML =
     peringatan +
     (daftar.length
-      ? `<ul class="kabar">${daftar.slice(0, 30).map((p) => {
+      ? `<ul class="fl-feed sg-feed">${daftar.slice(0, 30).map((p) => {
           const jenis = jenisPos(p);
           const metrik = p.metrik
             ? [angka(p.metrik.suka) && `${angka(p.metrik.suka)} suka`, angka(p.metrik.ulang) && `${angka(p.metrik.ulang)} ulang`].filter(Boolean)
@@ -1172,31 +1215,32 @@ function gambarKabar() {
           // berita memakai gambar kecil di samping judul supaya daftarnya tetap padat.
           const sosial = jenis !== 'berita';
           const mini = !sosial && p.gambar
-            ? `<a class="kabar-mini" href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow" tabindex="-1" aria-hidden="true">
+            ? `<a class="sg-feed__mini" href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow" tabindex="-1" aria-hidden="true">
                  <img src="${aman(p.gambar)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>`
             : '';
           const besar = sosial && p.gambar
-            ? `<a class="kabar-media" href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow">
+            ? `<a class="sg-feed__media" href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow">
                  <img src="${aman(p.gambar)}" alt="" loading="lazy" referrerpolicy="no-referrer">
-                 ${p.adaVideo ? `<span class="main">${ikon('main')}</span>` : ''}</a>`
+                 ${p.adaVideo ? `<span class="sg-feed__main">${ikon('main')}</span>` : ''}</a>`
             : '';
-          return `<li data-jenis="${jenis}" data-kanal="${aman(p.kanal)}">
-            <div class="kabar-meta">
-              <span class="kabar-lencana" data-jenis="${jenis}">${LABEL_JENIS[jenis]}</span>
+          return `<li data-src="${SRC[jenis]}">
+            <div class="fl-feed__meta">
+              <span class="fl-src" data-src="${SRC[jenis]}">${LABEL_JENIS[jenis]}</span>
               <span class="asal">${aman(p.penulis ? `${p.penulis} ${p.sumber}` : p.sumber || p.kanal)}</span>
-              <span>·</span><span title="${aman(jamWib(p.waktu))}">${lalu(p.waktu)}</span>
+              <span title="${aman(jamWib(p.waktu))}">${lalu(p.waktu)}</span>
             </div>
-            <div class="kabar-baris">
+            <div class="sg-feed__baris">
               <div>
                 <a href="${aman(p.tautan)}" target="_blank" rel="noopener nofollow">${aman(p.judul)}</a>
                 ${besar}
-                ${metrik.length ? `<div class="kabar-metrik">${metrik.map((m) => `<span>${aman(m)}</span>`).join('')}</div>` : ''}
+                ${metrik.length ? `<div class="sg-feed__metrik">${metrik.map((m) => `<span>${aman(m)}</span>`).join('')}</div>` : ''}
+                ${jenis === 'sosial' ? `<span class="sg-feed__belum">Belum diverifikasi</span>` : ''}
               </div>
               ${mini}
             </div>
           </li>`;
         }).join('')}</ul>`
-      : `<p style="color:var(--ink-3)">Belum ada yang masuk di kanal ini.</p>`);
+      : `<p class="sg-kosong">Belum ada yang masuk di kanal ini.</p>`);
 }
 
 const NAMA_SUMBER = {
@@ -1208,6 +1252,10 @@ const NAMA_SUMBER = {
   'bmkg-gempa': 'BMKG — gempa bumi',
   berita: 'Google News — Anak Krakatau',
   'berita-abu': 'Google News — abu vulkanik',
+  'berita-penerbit': 'RSS ANTARA, CNN Indonesia, Tempo',
+  'berita-penerbangan': 'Google News — penutupan bandara',
+  'sigmet-abu': 'NOAA AWC — SIGMET abu vulkanik',
+  'metar-bandara': 'NOAA AWC — METAR bandara',
   'x-nitter': 'X lewat Nitter — pencarian kata kunci',
   'x-resmi': 'X — linimasa akun resmi',
   'x-fxtwitter': 'X lewat FxTwitter — melengkapi isi posting',
@@ -1216,9 +1264,14 @@ const NAMA_SUMBER = {
 
 function gambarSumber() {
   $('#daftar-sumber').innerHTML = D.kesehatan
-    .map((s) => `<li class="${s.ok ? 'ok' : 'gagal'}">${ikon(s.ok ? 'cek' : 'silang')}
-      <div><b>${aman(NAMA_SUMBER[s.nama] || s.nama)}</b>
-      <small>${s.ok ? `Berhasil diambil ${lalu(s.waktu)}` : aman(s.pesan || 'gagal')}</small></div></li>`)
+    .map((s) => {
+      // Chip umur mengikuti kit: hijau segar, kuning bersegitiga basi, merah gagal atau sangat lama.
+      const umur = (Date.now() - Date.parse(s.waktu)) / 60000;
+      const usia = !s.ok || umur >= 180 ? 'old' : umur >= 30 ? 'stale' : '';
+      return `<li><b>${aman(NAMA_SUMBER[s.nama] || s.nama)}</b>
+        <span class="fl-fresh"${usia ? ` data-age="${usia}"` : ''}>${s.ok ? lalu(s.waktu) : 'Gagal'}</span>
+        <small>${s.ok ? `Berhasil diambil ${jamWib(s.waktu)}` : aman(s.pesan || 'gagal')}</small></li>`;
+    })
     .join('');
 }
 
@@ -1227,12 +1280,15 @@ function gambarSumber() {
 // Tanpa percobaan ulang, halaman menggantung sampai penyegaran lima menit —
 // terlalu lama untuk halaman peringatan. Jeda dinaikkan bertahap sampai 30 detik.
 let percobaan = 0;
+function tampilGalat(teks) {
+  $('#galat-wadah').hidden = !teks;
+  if (teks) $('#galat-atas').textContent = teks;
+}
 function jadwalUlang() {
   const jeda = Math.min(3000 * 2 ** percobaan++, 30000);
-  $('#galat-atas').hidden = false;
-  $('#galat-atas').textContent = D
+  tampilGalat(D
     ? `Penyegaran gagal. Angka di bawah dari pengambilan sebelumnya. Mencoba lagi ${Math.round(jeda / 1000)} detik lagi.`
-    : `Data belum bisa dimuat. Mencoba lagi ${Math.round(jeda / 1000)} detik lagi…`;
+    : `Data belum bisa dimuat. Mencoba lagi ${Math.round(jeda / 1000)} detik lagi…`);
   setTimeout(() => muat().catch(jadwalUlang), jeda);
 }
 
@@ -1246,7 +1302,7 @@ async function muat() {
   D = await r.json();
 
   percobaan = 0;
-  $('#galat-atas').hidden = true;
+  tampilGalat(null);
   gambarSegar();
   gambarPilihKota();
   gambarStrip();
@@ -1263,23 +1319,23 @@ $('#tombol-tema').onclick = () => {
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (!tema) terapkanTema();
 });
-for (const b of $$('.tab-u')) b.onclick = () => pindahTab(b.dataset.ke);
-for (const b of $$('.strip-sisi')) b.onclick = () => pindahTab(b.dataset.ke);
+for (const b of $$('[data-tab]')) b.onclick = (e) => { e.preventDefault(); pindahTab(b.dataset.tab); };
+for (const b of $$('.sg-strip__sel')) b.onclick = () => pindahTab(b.dataset.ke);
 addEventListener('hashchange', () => pindahTab(location.hash.slice(1), false));
 // Dialog bawaan peramban: sudah punya lapisan gelap, jebakan fokus, dan Esc.
 const dlg = $('#bantuan');
 $('#tombol-bantuan').onclick = () => dlg.showModal();
 $('#tutup-bantuan').onclick = () => dlg.close();
+$('#tutup-bantuan-2').onclick = () => dlg.close();
 // Klik di luar kotaknya menutup — <dialog> sendiri memenuhi seluruh layar.
 dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 
 $('#tombol-lokasi').onclick = pakaiLokasi;
-$('#alih-siaga').onclick = () => alihPeta(false);
-$('#alih-windy').onclick = () => alihPeta(true);
+$('#alih-siaga').onchange = () => alihPeta(false);
+$('#alih-windy').onchange = () => alihPeta(true);
 for (const id of ['tab-semua', 'tab-resmi', 'tab-publik'])
-  $(`#${id}`).onclick = (e) => {
+  $(`#${id}`).onchange = () => {
     tabKabar = id.replace('tab-', '');
-    for (const t of $$('.tab')) t.setAttribute('aria-selected', t === e.currentTarget);
     gambarKabar();
   };
 // Grafik di dalam lipatan baru punya ukuran setelah lipatannya dibuka.

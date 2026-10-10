@@ -274,6 +274,13 @@ Indonesia dan Kemenhub sebagaimana diberitakan — dan karena Google News ikut m
 situs resmi, sebagian hasilnya memang terbitan lembaganya sendiri (kemenhub.go.id,
 bmkg.go.id, setneg, presidenri.go.id).
 
+Daftarnya disaring dua kali. Judul harus menyebut penerbangan **dan** abu atau erupsi
+(`kabarBandaraRelevan` di `src/kumpul.js`), karena Google News mencocokkan kueri ke seluruh
+isi artikel: saat erupsi mereda, tanpa saringan ini daftarnya terisi berita bandara Bali
+yang tidak ada hubungannya. Umurnya juga dibatasi 72 jam, karena status bandara berubah
+dalam hitungan jam. Kalau tidak ada yang lolos, halaman berkata begitu dan menambahkan
+bahwa itu bukan jaminan bandara beroperasi normal, bukan menampilkan daftar kosong.
+
 Judul yang menyebut nama sebuah bandara juga ditempelkan ke kartu bandara itu, satu judul
 terbaru saja. Pencocokannya lewat `alias` di config (`"soetta"`, `"halim"`), bukan nama
 kota — kalau tidak, berita banjir Palembang ikut nempel ke bandaranya.
@@ -411,23 +418,25 @@ Halaman tetap berfungsi penuh tanpa izin lokasi. Fiturnya percepatan, bukan syar
 
 ## Tema
 
-Dua keadaan saja: **terang** dan **gelap**. Selama pembaca belum menekan tombolnya,
-tidak ada atribut tema yang dipasang sama sekali — `@media (prefers-color-scheme)` yang
-menentukan, jadi halaman ikut perangkat, termasuk saat perangkat berganti sendiri dari
-terang ke gelap di malam hari. Sekali ditekan, pilihannya disimpan dan menang.
+Dua pilihan saja: **terang** dan **gelap**. Selama pembaca belum menekan tombolnya,
+`<html data-theme="auto">`, nilai kit Flavida yang mengikuti `prefers-color-scheme`, jadi
+halaman ikut perangkat, termasuk saat perangkat berganti sendiri dari terang ke gelap di
+malam hari. Sekali ditekan, pilihannya disimpan (`light` atau `dark`) dan menang.
 
 Tombolnya menampilkan **tujuan**, bukan keadaan sekarang: ikon bulan berarti "ganti ke
 gelap". Tema juga bisa dipaksa lewat `?tema=terang` atau `?tema=gelap` untuk berbagi
 tautan atau mengambil tangkapan layar.
 
-Mode gelap bukan pembalikan otomatis: langkah warnanya dipilih ulang untuk latar gelap
-dan diuji ulang. Orang memeriksa status gunung jam dua pagi.
+Mode gelap bukan pembalikan otomatis: token kit memetakan ulang warna untuk latar hangat
+yang gelap, dan komponen tidak berubah. Orang memeriksa status gunung jam dua pagi.
+Semua warna di `gaya.css` dan di grafik SVG adalah `var(--token)`, jadi tema berganti tanpa
+menggambar ulang apa pun.
 
 Tabel kota memakai penanda yang sama: baris yang sedang dipakai **ditebalkan** dan diberi
-garis di tepi kiri, bukan warna saja. Status tiap kota tampil sebagai keping berikon
-dan berwarna — warna, bentuk, dan teks sekaligus. Tabelnya digulir mendatar di dalam
-wadahnya sendiri, jadi badan halaman tidak pernah bergulir ke samping. Ketuk sebuah baris
-untuk memindahkan seluruh halaman ke kota itu.
+garis di tepi kiri, bukan warna saja. Status tiap kota tampil sebagai keping `.fl-level`:
+bentuk, warna, dan kata sekaligus. Di layar sempit tabelnya berubah jadi kartu bertumpuk,
+jadi tidak ada yang tersembunyi di balik gulir mendatar. Ketuk sebuah baris untuk
+memindahkan seluruh halaman ke kota itu.
 
 Tidak ada kedipan saat halaman dimuat — atribut temanya dipasang oleh skrip kecil di
 `<head>` sebelum halaman digambar.
@@ -477,12 +486,14 @@ config/
   ambang.json          titik patah ISPU, level PVMBG, teks tindakan — semua bersitasi
 public/
   index.html           satu halaman, tanpa langkah build
-  gaya.css             token Flavida + palet status
+  gaya.css             lapisan Siaga di atas kit: hanya yang belum punya komponen (peta, tangga level, ubin kamera)
+  flavida/             kit Flavida v4.1 yang disalin apa adanya: 4 CSS, 2 font, tanda logo, 2 stiker
   app.js               peta SVG, kompas angin, grafik — vanilla, tanpa kerangka kerja
   coastline.json       garis pantai Selat Sunda, 7 KB (Natural Earth 10m, disederhanakan)
-test.js                40 pemeriksaan mandiri, tanpa framework
+test.js                42 pemeriksaan mandiri, tanpa framework
 scripts/
-  tangkap.mjs          tangkapan layar README lewat CDP (alat pengembangan)
+  tangkap.mjs          tangkapan layar README lewat CDP, sekaligus memeriksa tata letak (alat pengembangan)
+  ambil-kit.sh         salin ulang kit dari ../flavida-design-system ke public/flavida/
   garis-pantai.mjs     buat ulang coastline.json dari Natural Earth (sekali jalan)
 docs/threads.md        cara mendapatkan token Threads, berikut batasannya
 ```
@@ -504,11 +515,11 @@ ke semua orang, dan pembaca yang tidak meminta gzip menerima byte terkompresi. I
 menggigit begitu ada CDN atau proksi di depan layanan — persis keadaan yang dituju bagian
 di atas.
 
-**Ikon punya ukuran bawaan.** Setiap ikon dari `ikon()` membawa kelas `.ikon` yang
-memberinya `1em`. Tanpa itu, `<svg>` tanpa atribut `width`/`height` diberi 300 × 150 oleh
-peramban, dan dengan `svg { display: block }` global sebuah ikon hiasan berubah jadi balok
-raksasa — persis yang sempat terjadi pada keterangan kamera. Kekhususan `.ikon` sengaja
-rendah, jadi aturan seperti `.petak-sel svg` tetap menang saat butuh ukuran lain.
+**Ikon punya ukuran bawaan.** Setiap ikon dari `ikon()` membawa kelas `.fl-icon` dari kit,
+yang memberinya `1.25em`. Tanpa itu, `<svg>` tanpa atribut `width`/`height` diberi
+300 × 150 oleh peramban dan berubah jadi balok raksasa, persis yang sempat terjadi pada
+keterangan kamera. Ikonnya digambar sendiri di `index.html` dengan garis 2 px berujung
+bulat, sepadan dengan set Lucide di kit (yang tidak punya gunung, masker, atau pesawat).
 
 **Nol dependensi npm.** Node 25 sudah membawa `fetch`, `node:sqlite`, `node:http`, dan
 `WebSocket`. Tidak ada `npm install`, tidak ada rantai pasok yang perlu dijaga, dan
@@ -737,23 +748,43 @@ terjadi: footer situs MAGMA sempat terbaca sebagai rekomendasi keselamatan.
 
 ## Catatan desain
 
-Tampilan memakai **Flavida Design System** — Bricolage Grotesque untuk judul, DM Sans untuk
-teks, latar krem, tombol pil, sudut kartu 20 px.
+Tampilan memakai **Flavida Design System v4.1, "Flame-tree clay"**: permukaan puffy dengan
+cahaya di tepi atas dan bayangan hangat, sudut 20 px untuk kartu dan 24 px untuk panel,
+tombol pil yang menekan ke dalam saat disentuh, Gabarito untuk judul dan Figtree untuk
+teks (keduanya di-host sendiri, jadi tidak ada permintaan font ke pihak ketiga). Sumber
+panduannya ada di repo `flavida-design-system`; `public/flavida/VERSI.txt` mencatat commit
+yang sedang dipakai.
 
-Satu keputusan yang layak dijelaskan: **warna api Flavida tidak dipakai untuk tingkat
-bahaya.** Flame `#E8391D` tetap milik elemen interaktif (tautan, tombol, fokus), sementara
-tingkat bahaya memakai palet status terpisah hijau → kuning → jingga → merah, mengikuti
-kelaziman PVMBG dan ISPU yang sudah dikenal orang Indonesia.
+**Kit disalin, tidak ditulis ulang.** `scripts/ambil-kit.sh` menyalin empat CSS, dua font,
+tanda logo, dan dua stiker ke `public/flavida/`. Jangan edit isinya; kalau kit berubah,
+jalankan skripnya lagi dan naikkan nomor `?v=` di `index.html`. Semua yang khas Siaga ada
+di `gaya.css`, dan isinya hanya apa yang belum punya komponen di kit.
 
-Palet status itu diuji dengan pemeriksa keterbedaan warna, dan hasilnya: **empat warna
-hangat berurutan tidak bisa lolos ambang keterbedaan lewat rona saja** — buta warna deutan
-tidak bisa memisahkan kuning dari jingga dari merah. Yang menyelamatkan justru beda terang,
-dan itu pun tidak cukup untuk dijadikan satu-satunya penanda. Maka aturannya: **status
-selalu tampil sebagai warna + label teks + bentuk ikon**, tidak pernah warna saja. Peta
-selalu punya padanan tabel. Grafik magnitudo memakai ramp satu rona, bukan skala status.
+**Yang dipakai dari kit:** `.fl-nav`, `.fl-strip` (status sticky), `.fl-level` (tingkat),
+`.fl-fresh` (umur data), `.fl-src` (jenis sumber), `.fl-cam`, `.fl-feed`, `.fl-health`,
+`.fl-stat`, `.fl-callout`, `.fl-alert`, `.fl-chartcard`, `.fl-dt`, `.fl-accordion`,
+`.fl-seg`, `.fl-dialog`, `.fl-tabbar`, `.fl-marker`. Polanya diambil dari
+`patterns/dashboard.html` di kit, yang memang menyebut Siaga sebagai pemakainya.
 
-Mode gelap bukan pembalikan otomatis: langkahnya dipilih ulang untuk latar gelap dan diuji
-ulang. Orang memeriksa status gunung jam dua pagi.
+**Yang sengaja tidak dipakai:** Motion, `flavida.js`, dan sprite ikon bawaan.
+Halaman ini bergerak lewat CSS saja (hover mengangkat, tekan melesak, kerucut abu menyapu
+sekali saat data masuk, semuanya mati di `prefers-reduced-motion`), dan itu menghemat
+36 KB gzip (Motion 24, `flavida.js` 8, sprite ikon 3) untuk orang yang membukanya di sinyal buruk.
+
+**Status tidak pernah warna saja.** Tingkat memakai `.fl-level` milik kit: lingkaran
+(aman), segitiga (waspada), belah ketupat (siaga), segi delapan (bahaya), lengkap dengan
+kata. Penanda kota di peta memakai bentuk yang sama, dan legendanya berupa chip yang sama,
+jadi peta terbaca dalam skala abu-abu. Peta selalu punya padanan tabel.
+
+**Flav hanya muncul di dua tempat**: dialog "Cara pakai" dan keadaan galat saat status
+resmi tidak bisa diambil. Di bagian lain yang berbicara adalah datanya. Maskot yang
+tersenyum di samping status erupsi bukan nada yang tepat.
+
+**Keputusan lama yang berubah:** dulu warna api Flavida sengaja tidak dipakai untuk bahaya
+dan Siaga punya palet status sendiri. Kit v4.1 sudah punya skala tingkat sendiri
+(`--level-1..4`) yang disusun untuk keperluan ini, lengkap dengan bentuknya, jadi sekarang
+dipakai apa adanya. Seri grafik memakai `--chart-1..8`; empat lapisan angin di peta
+memakai rona kategorikal supaya kerucut yang bertumpuk tetap terbaca.
 
 ---
 

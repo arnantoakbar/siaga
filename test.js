@@ -5,9 +5,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { jarakKm, arahDerajat, bedaSudut, mataAngin, keTeks } from './src/util.js';
 import { hitungIspu, ispuGabungan, radiusResmiKm, jalurAbu, analisaKota, analisaBandara, didalamPoligon } from './src/analisa.js';
-import { jelasCuaca, pandangMeter } from './src/sumber/penerbangan.js';
+import { jelasCuaca, pandangMeter, namaGunung } from './src/sumber/penerbangan.js';
 import { keWaktuISO, bagian } from './src/sumber/magma.js';
-import { relevan } from './src/kumpul.js';
+import { relevan, kabarBandaraRelevan } from './src/kumpul.js';
 
 const ambang = JSON.parse(readFileSync(new URL('./config/ambang.json', import.meta.url)));
 const tp = ambang.ispuTitikPatah;
@@ -198,6 +198,13 @@ uji('poligon kurang dari tiga titik tidak pernah dianggap berisi', () => {
   assert.equal(didalamPoligon(0, 0, [{ lat: 0, lon: 0 }, { lat: 1, lon: 1 }]), false);
 });
 
+uji('nama gunung SIGMET dibersihkan dari awalan penerbit', () => {
+  assert.equal(namaGunung('ERUPTION MT KRAKATAU'), 'KRAKATAU');
+  assert.equal(namaGunung('KRAKATAU'), 'KRAKATAU');
+  assert.equal(namaGunung('MT ANAK KRAKATAU'), 'ANAK KRAKATAU');
+  assert.equal(namaGunung(''), null);
+  assert.equal(namaGunung(undefined), null);
+});
 uji('jarak pandang dibaca dari meter di teks METAR asli', () => {
   assert.deepEqual(pandangMeter('METAR WIII 080030Z 21004KT 190V260 4000 HZ FEW020 26/23 Q1014 NOSIG'),
     { meter: 4000, atauLebih: false });
@@ -231,6 +238,13 @@ uji('tanpa METAR status tetap null, tidak dianggap aman', () => {
   const a = analisaBandara(bdr, gunung, undefined, []);
   assert.equal(a.status, null);
   assert.equal(a.metar, null);
+});
+uji('berita bandara harus menyebut penerbangan DAN abu atau erupsi', () => {
+  assert.equal(kabarBandaraRelevan('Bandara Soekarno Hatta dan Halim Kembali Dibuka Usai Erupsi Krakatau'), true);
+  assert.equal(kabarBandaraRelevan('Abu Anak Krakatau Sebabkan 49 Penerbangan di Kualanamu Batal'), true);
+  assert.equal(kabarBandaraRelevan('Bandara Internasional I Gusti Ngurah Rai targetkan peningkatan konektivitas'), false);
+  assert.equal(kabarBandaraRelevan('Gunung Anak Krakatau Kembali Erupsi, Kolom Abu Capai 250 Meter'), false);
+  assert.equal(kabarBandaraRelevan(undefined), false);
 });
 uji('judul berita dicocokkan ke bandara lewat alias, bukan nama kotanya', () => {
   const kabar = [

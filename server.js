@@ -22,6 +22,8 @@ const MIME = {
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
   '.webmanifest': 'application/manifest+json',
   '.ico': 'image/x-icon',
 };
@@ -200,7 +202,10 @@ const srv = createServer(async (req, res) => {
     // Aset dipanggil dengan ?v=… yang ikut berubah tiap rilis, jadi boleh disimpan
     // lama. Halaman induknya tidak: ia yang menentukan versi aset mana yang dipakai.
     const berversi = url.searchParams.has('v');
-    const cache = berversi ? 'public, max-age=31536000, immutable' : 'no-cache';
+    // Font dipanggil dari dalam CSS tanpa ?v=, dan hampir tidak pernah berganti:
+    // sebulan cukup, dan tidak membuat tiap muat halaman menanyakan ulang ke server.
+    const cache = berversi ? 'public, max-age=31536000, immutable'
+      : extname(berkas) === '.woff2' ? 'public, max-age=2592000' : 'no-cache';
 
     if (req.headers['if-none-match'] === etag) {
       res.writeHead(304, { ETag: etag, 'Cache-Control': cache, Vary: 'Accept-Encoding' });

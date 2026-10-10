@@ -46,6 +46,21 @@ export function relevan(pos, kunci) {
   return kunci.some((k) => teks.includes(k));
 }
 
+/**
+ * Apakah sebuah judul berita benar-benar soal bandara yang terganggu abu?
+ *
+ * Google News mencocokkan kueri ke seluruh isi artikel, jadi saat erupsi mereda daftar
+ * terisi berita bandara yang tidak ada hubungannya (target konektivitas bandara Bali, dst).
+ * Di bagian "Kabar penutupan & pembukaan" itu menyesatkan, jadi judulnya sendiri harus
+ * menyebut penerbangan DAN abu atau erupsinya. Lebih baik melewatkan satu berita yang
+ * judulnya tidak menyebut penyebab daripada menampilkan yang tidak relevan.
+ */
+const KATA_PENERBANGAN = /bandara|bandar udara|penerbangan|pesawat|maskapai|notam|airnav|ruang udara/i;
+const KATA_ABU = /krakatau|abu vulkanik|abu gunung|erupsi|letusan/i;
+export const kabarBandaraRelevan = (judul = '') => KATA_PENERBANGAN.test(judul) && KATA_ABU.test(judul);
+// Status bandara berubah dalam hitungan jam; berita lewat tiga hari bukan lagi kabar.
+const UMUR_KABAR_BANDARA_MS = 72 * 3600e3;
+
 /** Media sosial + berita. Tiap kanal berdiri sendiri; yang mati dilaporkan mati. */
 async function kanalPublik(db) {
   const g = CONFIG.gunung.nama;
@@ -192,7 +207,7 @@ export async function kumpulkan(db) {
   const sigmet = sSigmet.ok ? sSigmet.data : null;
   const metarPer = new Map((sMetar.ok ? sMetar.data : []).map((m) => [m.icao, m]));
   const kabarBandara = (sKabarUdara.ok ? sKabarUdara.data : [])
-    .filter((k) => k.waktu)
+    .filter((k) => k.waktu && Date.now() - Date.parse(k.waktu) < UMUR_KABAR_BANDARA_MS && kabarBandaraRelevan(k.judul))
     .sort((a, b) => b.waktu.localeCompare(a.waktu));
   const bandara =
     sSigmet.ok || sMetar.ok

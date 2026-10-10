@@ -23,6 +23,13 @@ const ARAH = {
 };
 
 /**
+ * Kolom `qualifier` SIGMET tidak seragam antar penerbitan: kadang "KRAKATAU", kadang
+ * "ERUPTION MT KRAKATAU". Tanpa dibersihkan, halaman menulis "dari Eruption Mt Krakatau".
+ */
+export const namaGunung = (q = '') =>
+  q.replace(/^ERUPTION\s+/i, '').replace(/^(MT\.?|MOUNT|GUNUNG)\s+/i, '').trim() || null;
+
+/**
  * SIGMET abu vulkanik yang masih berlaku untuk FIR yang diminta.
  *
  * SIGMET adalah peringatan cuaca berbahaya untuk penerbangan. Yang jenis VA
@@ -38,7 +45,7 @@ export async function sigmetAbu(fir = []) {
       fir: s.firId,
       firNama: s.firName,
       nomor: s.seriesId,
-      gunung: s.qualifier || null,
+      gunung: namaGunung(s.qualifier),
       // base/top dalam kaki; SFC ditulis 0 oleh AWC.
       dasarKaki: s.base ?? null,
       puncakKaki: s.top ?? null,
