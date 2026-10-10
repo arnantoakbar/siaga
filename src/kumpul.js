@@ -72,9 +72,11 @@ async function kanalPublik(db) {
     coba(db, 'berita-penerbit', () => publik.beritaPenerbit(CONFIG.umpanBerita || [], [
       g.toLowerCase(), ...(CONFIG.sumberX.kataKunci || []), 'abu vulkanik', 'erupsi',
     ])),
-    CONFIG.sumberX.aktif
+    // x-nitter punya sakelar sendiri. Mematikan sumberX.aktif akan ikut mematikan x-resmi
+    // yang masih berguna, jadi nitter dimatikan terpisah lewat sumberX.nitterAktif.
+    CONFIG.sumberX.aktif && CONFIG.sumberX.nitterAktif !== false
       ? coba(db, 'x-nitter', () => publik.xNitter(CONFIG.sumberX.nitterInstances, kunci))
-      : { nama: 'x-nitter', ok: false, pesan: 'dimatikan lewat config', waktu: new Date().toISOString() },
+      : { nama: 'x-nitter', ok: false, pesan: 'dimatikan lewat config (nitterAktif: false)', waktu: new Date().toISOString() },
     CONFIG.sumberX.aktif
       ? coba(db, 'x-resmi', async () => {
           const per = await Promise.allSettled(CONFIG.sumberX.akunResmi.map((a) => publik.xSindikasi(a)));

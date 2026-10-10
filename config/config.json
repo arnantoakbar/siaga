@@ -132,6 +132,8 @@
   "port": 8080,
   "sumberX": {
     "aktif": true,
+    "nitterAktif": false,
+    "_nitterAktif": "Dimatikan 2026-10-10: seluruh instans Nitter mati (0 dari 4492 percobaan berhasil sejak 8 Sep 2026 — xcancel HTTP 451, nitter.space HTTP 403). Ini hanya mematikan x-nitter; x-resmi dan x-fxtwitter tetap jalan. Hidupkan lagi dengan nitterAktif: true begitu ada cara lain mengambil percakapan media sosial.",
     "akunResmi": [
       "infoBMKG",
       "BNPB_Indonesia",
