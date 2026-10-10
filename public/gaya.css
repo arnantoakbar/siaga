@@ -154,7 +154,9 @@ html { scroll-padding-top: calc(var(--sg-nav-h) + 108px); }
 .sg-cam[data-gagal='true'] img { display: none; }
 .sg-cam .fl-cam__bar { bottom: 6px; left: 6px; right: 6px; padding: 3px 10px; font-size: 0.6875rem; min-width: 0; }
 .sg-cam .fl-cam__bar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sg-cam-besar { margin: 12px 0 0; }
+/* Sumbernya cuma 150 px: lebih dari sekitar dua kali lipat hanya menghasilkan gambar kabur. */
+.sg-cam-besar { margin: 12px auto 0; max-width: 320px; }
+.sg-cam-besar .sg-cam-kaki { text-align: center; }
 .sg-cam-besar .fl-cam { aspect-ratio: auto; background: #17110E; }
 .sg-cam-besar .fl-cam img { position: static; height: auto; object-fit: initial; }
 .sg-cam-kaki { margin: 12px 0 0; font-size: var(--text-caption); line-height: 1.6; color: var(--color-light); }
